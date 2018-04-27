@@ -1,4 +1,4 @@
-### FERTILITY ###
+##### FERTILITY #####
 
 #' Annual probability of birth as a function of calendar year and mother’s age.
 #' HIV negative
@@ -69,14 +69,14 @@ prob.birth <- function(age,yr,asfr_s,tfr_s){
 #' Uses prob.birth to compute annual probability of birth for each years, ages combination
 #' The birth probability was set to zero for women younger than 15 years and older than 49 years.
 #' 
-#' @param ages (numeric) mother's ages
-#' @param yr (numeric) years in simulation
+#' @param ages (numeric) vector mother's ages
+#' @param yr (numeric) vector of years in simulation
 #' @param asfr_s (data.frame) estimates of age-specific fertility rates (ASFR) 
 #' from the United Nations Population Division's World Fertility Data (2013) 
 #' @param tfr_s (data.frame) Interpolated estimates of the total fertility rate (TFR) 
 #' from the United Nations Population Division’s World Population Prospects (2012)
 #' @return (matrix) annual probability of birth for each age-year
-prob.birth.years.ages <- function(ages,years,asfr_s,tfr_s){
+prob.birth.ages.years <- function(ages,years,asfr_s,tfr_s){
   
   # Create an empty matrix
   prob.birth.all <- matrix(NA,length(years),length(ages) )
@@ -213,4 +213,59 @@ prob.birth.hiv <- function(ages,sexactive15,arts){
   prob.birth.hiv
 }
 
+
+##### MORTALITY #####
+
+#' Annual probability of death for HIV-negative children for 
+#' each age-year combination
+#' 
+#' Uses the time series for 5q0 and 1q0 estimates from the UN Inter-agency 
+#' Group for Child Mortality Estimation (IGME) (2012) for one country.
+#' 
+#' @param ages (numeric) vector of child's ages
+#' @param yr (numeric) vector of years in simulation
+#' @param u5m_c (data.frame) child mortatily UN Inter-agency Group for Child Mortality Estimation (UN IGME) (2012) for one country
+#' @return (matrix) annual probability of death for  HIV-negative children for 
+#' each age and year combination
+baby.death.nohiv <- function(ages,years,u5m_c){
+
+  # Create empty matrix: years x ages
+  baby.death.nohiv <- matrix(NA,length(years),length(ages) )
+  row.names(baby.death.nohiv) <- years
+  colnames(baby.death.nohiv) <- ages
   
+  # Fill the matrix
+  for (y in years) { # For each year
+    for (a in ages) { # For each age
+      # if the year is previous to our earliest year of u5m_c, get the first year available
+      if(y<min( u5m_c$year)){
+        yr=min(u5m_c$year)
+      }else{
+        yr=y
+      }
+      
+      # ages less than 0 and grater than 4 have 0 probablity
+      if(a<0){baby.death.nohiv[as.character(y),as.character(a)]=0}
+      if(a>4){baby.death.nohiv[as.character(y),as.character(a)]=0}
+      
+      # Age 0: use 1q0 ratio
+      if(a==0){baby.death.nohiv[as.character(y),as.character(a)]=u5m_c$q1_0[u5m_c$year==yr]}
+      
+      # Age 1: use 1q1 ratio
+      if(a==1){baby.death.nohiv[as.character(y),as.character(a)]=u5m_c$q1_1[u5m_c$year==yr]}   
+      
+      # Age 2: use 1q2 ratio
+      if(a==2){baby.death.nohiv[as.character(y),as.character(a)]=u5m_c$q1_2[u5m_c$year==yr]}   
+      
+      # Age 3: use 1q3 ratio
+      if(a==3){baby.death.nohiv[as.character(y),as.character(a)]=u5m_c$q1_3[u5m_c$year==yr]}   
+      
+      # Age 4: use 1q4 ratio
+      if(a==4){baby.death.nohiv[as.character(y),as.character(a)]=u5m_c$q1_4[u5m_c$year==yr]}   
+    }
+  }
+  
+  baby.death.nohiv  
+}
+
+

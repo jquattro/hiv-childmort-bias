@@ -43,7 +43,7 @@ test_prob.birth_01 <- function(){
 }
 
 
-test_prob.birth.years.ages_01 <- function(){
+test_prob.birth.ages.years_01 <- function(){
   
   fertcountry <- "Botswana"
   
@@ -66,7 +66,7 @@ test_prob.birth.years.ages_01 <- function(){
   }) %>% bind_rows() %>% spread(age,pr.birth) %>% set_rownames(.$year) %>% select(-year) %>% as.matrix
   
   
-  test <- prob.birth.years.ages(ages,years,asfr_s,tfr_s)
+  test <- prob.birth.ages.years(ages,years,asfr_s,tfr_s)
   
   
   
@@ -159,4 +159,35 @@ test_prob.birth.hiv_01 <- function(){
   
   
   checkEquals(target,test)
+}
+
+
+test_baby.death.nohiv_01 <- function(){
+
+  years <- c(1946:2010)
+  ages <- c(-100:120)
+  
+  cm_cntry <- "Mali"
+  
+  u5m_edit<- read.csv(file.path(base.path,"data/u5m_edit.csv"),head=TRUE) 
+  u5m_c <- subset(u5m_edit, country==cm_cntry)
+  
+  target <- expand.grid(years,ages) %>% apply(1,function(x){
+    
+    yr <- max(x[1],min(u5m_c$year))
+
+    
+    data.frame(age=x[2],year=x[1],mort=ifelse(x[2] <0 | x[2] >4,0,u5m_c[u5m_c$year==yr,paste0("q1_",as.integer(x[2]))]))
+    
+  }) %>% bind_rows() %>% spread(age,mort) %>% set_rownames(.$year) %>% select(-year) %>% as.matrix
+  
+  
+  test <- baby.death.nohiv(ages,years,u5m_c)
+  
+  
+  
+  checkEquals(target,test)
+  
+  
+  
 }
