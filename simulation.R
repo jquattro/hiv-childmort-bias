@@ -78,11 +78,12 @@ prob.birth <- function(age,yr,asfr_s,tfr_s){
 #' @return (matrix) annual probability of birth for each age-year
 prob.birth.years.ages <- function(ages,years,asfr_s,tfr_s){
   
-  # Creat an empty matrix
+  # Create an empty matrix
   prob.birth.all <- matrix(NA,length(years),length(ages) )
   row.names(prob.birth.all) <- years
   colnames(prob.birth.all) <- ages
   
+  # Fill the matrix
   for (y in years) { # For each year
     for (a in ages) { # For eacj age
       res <- prob.birth(a,y,asfr_s,tfr_s) # Compute annual probability of birth
@@ -178,3 +179,38 @@ fert_hiv <- function(age,sexactive15,art){
     }
   }
 }
+
+
+#' Reduction in prob of giving birth due to HIV for each art, age combination
+#'
+#' Uses fert_hiv to compute the reduciton in probability of giving birth due to HIV
+#' for each art, ages combination.
+#' 
+#' @param ages (numeric) vector of mother's ages
+#' @param sexactive15 (numeric) percent of females aged 15-19 who are sexually active
+#' @param art (integer) vector of values that should be either: 0 (not on ART) or 1 (on ART)
+#' @return (matrix) reduction in prob of giving birth due to HIV 
+prob.birth.hiv <- function(ages,sexactive15,arts){
+  
+  # Create an empty matrix
+  prob.birth.hiv <- matrix(NA,length(ages),length(arts))
+  row.names(prob.birth.hiv) <- ages
+  colnames(prob.birth.hiv) <- arts
+  
+  # Fill the matrix
+  for (a in ages) {# For each age
+    for (b in arts) {# For each art
+      # Compute probability reduction
+      res <- fert_hiv(a,sexactive15,b)
+      # If the result is not NULL, store the result in the matrix, otherwise, set the value to 0
+      if (length(res)>0 ){
+        prob.birth.hiv[as.character(a),as.character(b)] <- res
+      }else {
+        prob.birth.hiv[as.character(a),as.character(b)] <- 0
+      }
+    }
+  }
+  prob.birth.hiv
+}
+
+  

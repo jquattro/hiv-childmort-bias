@@ -109,6 +109,7 @@ test_fert_hiv_01 <- function(){
 test_fert_hiv_02 <- function(){
   
   
+  
   ages <- seq(17,47,5)
   
   sexactive15 <- 0.75
@@ -135,4 +136,27 @@ test_fert_hiv_02 <- function(){
   
   checkEquals(target,test)
   
+}
+
+test_prob.birth.hiv_01 <- function(){
+  
+  arts <- c(0,1)
+  ages <- c(-100:120)
+  
+  sexactive15 <- 0.6
+  
+  target <- expand.grid(arts,ages) %>% apply(1,function(x){
+    
+    pr.reduction <- fert_hiv(x[2],sexactive15,x[1])
+    
+    data.frame(age=x[2],art=x[1],fert_hiv=ifelse(is.null(pr.reduction),0,pr.reduction))
+    
+  }) %>% bind_rows() %>% spread(art,fert_hiv) %>% set_rownames(.$age) %>% select(-age) %>% as.matrix
+  
+  
+  test <- prob.birth.hiv(ages,sexactive15,arts)
+  
+  
+  
+  checkEquals(target,test)
 }
