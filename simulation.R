@@ -272,6 +272,12 @@ baby.death.nohiv <- function(ages,years,u5m_c){
 
 #' Annual probability of death, HIV negative women
 #' 
+#' Time series for the probability of dying between ages 15 and 60 (45q15) 
+#' were taken from the Institute for Health Metrics and Evaluation (2010) 
+#' for selected countries. To obtain age-specific annual probabilities of death, 
+#' the 45q15 for an input “model country” and year in the simulation were matched
+#' to the UN model life table (UN Population Division 2012) with the closest 45q15.
+#' 
 #' @param age (numeric) woman's age
 #' @param year (numeric) year in simulation
 #' @param mort_s (data.frame) mortality series for the model country, must contain columns year and q45_15 
@@ -405,3 +411,36 @@ phivneg.death <- function(age,year,mort_s,adultmort,am_cntry,matmort,u5m_c){
   if(age>49){return(0)}
 }
 
+#' Annual probability of death, HIV negative women for each age year combination
+#' 
+#' Uses phivneg.death to compute annual probability of death for each age-year combination
+#' 
+#' @param ages (numeric) vector of ages
+#' @param years (numeric) vector of years in simulation
+#' @param mort_s (data.frame) mortality series for the model country, must contain columns year and q45_15 
+#' from the Institute for Health Metrics and Evaluation.
+#' @param adultmort (data.frame) UN model life table (UN Population Division). models mortality for each 45q15
+#' @param matmort (data.frame) Maternal mortality
+#' @param am_cntry (character) model country for adult mortality
+#' @param u5m_c (data.frame) child mortatily UN Inter-agency Group for Child Mortality 
+#' Estimation (UN IGME) (2012) for one country.
+#' @return (matrix) annual probability of death, HIV negative women (years x ages)
+phivneg.death.ages.years <- function(ages,years,mort_s,adultmort,am_cntry,matmort,u5m_c){
+  
+  prob.death.all <- matrix(NA,length(years),length(ages) )
+  row.names(prob.death.all) <- years
+  colnames(prob.death.all) <- ages
+  #head(prob.death.all)
+  for (y in years) {
+    for (a in ages) {
+      res <- phivneg.death(a,y,mort_s,adultmort,am_cntry,matmort,u5m_c)
+      if (length(res)>0 ){prob.death.all[as.character(y),as.character(a)] <- res}
+      else {
+        prob.death.all[as.character(y),as.character(a)] <- 0
+      }
+    }
+  }
+  
+  prob.death.all
+  
+}

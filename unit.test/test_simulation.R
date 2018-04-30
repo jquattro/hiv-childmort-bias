@@ -279,3 +279,42 @@ test_phivneg.death_01 <- function(){
   
   checkEquals(target,test)
 }
+
+
+test_phivneg.death.ages.years_01 <- function(){
+  
+  matmort = read.csv(file.path(base.path,"data/matmort.csv"),head=TRUE)
+  mort_series = read.csv(file.path(base.path,"data/IHME_female_mortSMALL.csv"),head=TRUE)
+  adultmort = read.csv(file.path(base.path,"data/MLTfemSMALL.csv"),head=TRUE)
+  
+  years <- c(1946:2010)
+  ages <- c(-100:120)
+  
+  
+  am_cntry <- "Madagascar"
+  
+  cm_cntry <- "Mali"
+  
+  
+  mort_s <- mort_series %>% filter(country==am_cntry)
+  
+  
+  u5m_edit<- read.csv(file.path(base.path,"data/u5m_edit.csv"),head=TRUE) 
+  u5m_c <- subset(u5m_edit, country==cm_cntry)
+  
+  target <- expand.grid(years,ages) %>% apply(1,function(x){
+    
+    result <- phivneg.death(x[2],x[1],mort_s,adultmort,am_cntry,matmort,u5m_c)
+    
+    data.frame(age=x[2],year=x[1],result=ifelse(is.null(result),0,result))
+    
+  }) %>% bind_rows() %>% spread(age,result) %>% set_rownames(.$year) %>% select(-year) %>% as.matrix
+  
+  
+  test <- phivneg.death.ages.years(ages,years,mort_s,adultmort,am_cntry,matmort,u5m_c)
+  
+  
+  
+  checkEquals(target,test)
+  
+}
