@@ -269,3 +269,139 @@ baby.death.nohiv <- function(ages,years,u5m_c){
 }
 
 
+
+#' Annual probability of death, HIV negative women
+#' 
+#' @param age (numeric) woman's age
+#' @param year (numeric) year in simulation
+#' @param mort_s (data.frame) mortality series for the model country, must contain columns year and q45_15 
+#' from the Institute for Health Metrics and Evaluation.
+#' @param adultmort (data.frame) UN model life table (UN Population Division). models mortality for each 45q15
+#' @param matmort (data.frame) 
+#' @param am_cntry (character) model country for adult mortality
+#' @param u5m_c (data.frame) child mortatily UN Inter-agency Group for Child Mortality 
+#' Estimation (UN IGME) (2012) for one country.
+#' @return (numeric) annual probability of death, HIV negative women.
+phivneg.death <- function(age,year,mort_s,adultmort,am_cntry,matmort,u5m_c){
+  
+  # Get 45q15 from the Institute for Health Metrics and Evaluation for the model country
+  #  during the simulation year. If the simulation year is earlier than 1970, get 1970 value.
+  if(year<1970){q45_15 = mort_s[,"q45_15"][mort_s[,"year"]==1970]}
+  if(year>=1970){q45_15 = mort_s[,"q45_15"][mort_s[,"year"]==year]}
+  
+  # Get E.0 from the UN model life table with the closest 45q15 (rounds down in case of tie) to that 
+  # in Institute for Health Metrics series.
+  # E.0 indicates which distribution we should use
+  min45 = which.min(abs(adultmort[,"q45_15"]-q45_15))
+  e0 = adultmort[min45,"E.0."]
+  
+  # Compute probability
+  
+  # For ages 0 to 4, compute as in baby.death.nohiv
+  
+  if(age<0){return(0)}
+  if(year<min( u5m_c$year)){yr=min(u5m_c$year)
+  }else{yr=year}
+  if(age==0){return(u5m_c$q1_0[u5m_c$year==yr])}
+  if(age==1){return(u5m_c$q1_1[u5m_c$year==yr])} 
+  if(age==2){return(u5m_c$q1_2[u5m_c$year==yr])} 
+  if(age==3){return(u5m_c$q1_3[u5m_c$year==yr])} 
+  if(age==4){return(u5m_c$q1_4[u5m_c$year==yr])}
+  
+  # Compute probability women older than 4
+  
+  # Ages 5 and 6 interpolate linearly between pr at 4 and 7 
+  
+  if(age==5){
+    pd5yr = adultmort$q.x.n.[adultmort$age==5 & adultmort$E.0.==e0]
+    q1_7 = 1-(1-pd5yr)^(1/5)
+    q1_4=u5m_c$q1_4[u5m_c$year==yr]
+    pd1yr = q1_4-((q1_4-q1_7)/3)
+    return(pd1yr)
+  }
+  if(age==6){
+    pd5yr = adultmort$q.x.n.[adultmort$age==5 & adultmort$E.0.==e0]
+    q1_7 = 1-(1-pd5yr)^(1/5)
+    q1_4=u5m_c$q1_4[u5m_c$year==yr]
+    pd1yr = q1_4-(2*((q1_4-q1_7)/3))
+    return(pd1yr)
+  }
+  if(age==7){
+    pd5yr = adultmort$q.x.n.[adultmort$age==5 & adultmort$E.0.==e0]
+    q1_7 = 1-(1-pd5yr)^(1/5)
+    pd1yr = q1_7
+    return(pd1yr)
+  }
+  
+  # Ages 8 and 9 interpolate linearly between 7 and 10?
+  
+  if(age==8){
+    pd5yr = adultmort$q.x.n.[adultmort$age==5 & adultmort$E.0.==e0]
+    q1_7 = 1-(1-pd5yr)^(1/5)
+    pd5yr = adultmort$q.x.n.[adultmort$age==10 & adultmort$E.0.==e0]
+    q1_10 = 1-(1-pd5yr)^(1/5)
+    pd1yr = q1_7-((q1_7-q1_10)/3)
+    return(pd1yr)
+  }
+  if(age==9){
+    pd5yr = adultmort$q.x.n.[adultmort$age==5 & adultmort$E.0.==e0]
+    q1_7 = 1-(1-pd5yr)^(1/5)
+    pd5yr = adultmort$q.x.n.[adultmort$age==10 & adultmort$E.0.==e0]
+    q1_10 = 1-(1-pd5yr)^(1/5)
+    pd1yr = q1_7-((q1_7-q1_10)/2)
+    return(pd1yr)  }
+  
+  
+  if(age>9 & age<15){
+    pd5yr = adultmort$q.x.n.[adultmort$age==10 & adultmort$E.0.==e0]
+    pd1yr = 1-(1-pd5yr)^(1/5)
+    return(pd1yr)
+  }
+  if(age>14 & age<20){
+    pd5yr = adultmort$q.x.n.[adultmort$age==15 & adultmort$E.0.==e0]
+    pd1yr = 1-(1-pd5yr)^(1/5)
+    pd1yr = pd1yr - matmort[,paste("X",year,sep="")][matmort$Country==am_cntry & matmort$Agegroup==1]
+    return(pd1yr)
+  }
+  if(age>19 & age<25){
+    pd5yr = adultmort$q.x.n.[adultmort$age==20 & adultmort$E.0.==e0]
+    pd1yr = 1-(1-pd5yr)^(1/5)
+    pd1yr = pd1yr - matmort[,paste("X",year,sep="")][matmort$Country==am_cntry & matmort$Agegroup==2]
+    return(pd1yr)
+  }
+  if(age>24 & age<30){
+    pd5yr = adultmort$q.x.n.[adultmort$age==25 & adultmort$E.0.==e0 ]
+    pd1yr = 1-(1-pd5yr)^(1/5)
+    pd1yr = pd1yr - matmort[,paste("X",year,sep="")][matmort$Country==am_cntry & matmort$Agegroup==3]
+    return(pd1yr)
+  }
+  if(age>29 & age<35){
+    pd5yr = adultmort$q.x.n.[adultmort$age==30 & adultmort$E.0.==e0 ]
+    pd1yr = 1-(1-pd5yr)^(1/5)
+    pd1yr = pd1yr - matmort[,paste("X",year,sep="")][matmort$Country==am_cntry & matmort$Agegroup==4]
+    return(pd1yr)
+  }
+  if(age>34 & age<40){
+    pd5yr = adultmort$q.x.n.[adultmort$age==35 & adultmort$E.0.==e0]
+    pd1yr = 1-(1-pd5yr)^(1/5)
+    pd1yr = pd1yr - matmort[,paste("X",year,sep="")][matmort$Country==am_cntry & matmort$Agegroup==5]
+    return(pd1yr)
+  }
+  if(age>39 & age<45){
+    pd5yr = adultmort$q.x.n.[adultmort$age==40 & adultmort$E.0.==e0 ]
+    pd1yr = 1-(1-pd5yr)^(1/5)
+    pd1yr = pd1yr - matmort[,paste("X",year,sep="")][matmort$Country==am_cntry & matmort$Agegroup==6]
+    return(pd1yr)
+  }
+  if(age>44 & age<50){
+    pd5yr = adultmort$q.x.n.[adultmort$age==45 & adultmort$E.0.==e0]
+    pd1yr = 1-(1-pd5yr)^(1/5)
+    pd1yr = pd1yr - matmort[,paste("X",year,sep="")][matmort$Country==am_cntry & matmort$Agegroup==7]
+    return(pd1yr)  
+  }
+  
+  # For ages older than 49, return 0
+  
+  if(age>49){return(0)}
+}
+
