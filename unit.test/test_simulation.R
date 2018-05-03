@@ -365,3 +365,18 @@ test_art.surv.vec_01 <- function(){
   
   checkEquals(target,test)    
 }
+
+test_phiv.death_01 <- function(){
+  
+  
+  target <- c(0.01,0.02020202,0.041237113,0.053763441,0.079545455,0.098765432,0.123287671,0.15625,0.185185185,0.204545455,0.228571429,	0.296296296,0.263157895,0.357142857,0.333333333,0.333333333,0.5,0.5,1)
+  
+  year <- 1993
+  
+  hiv_dates <- 1993-c(0:18)
+
+  test <- lapply(hiv_dates,function(hiv_date) phiv.death(hiv_date,year)) %>% unlist
+
+  checkEquals(target,test)
+      
+}

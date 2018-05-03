@@ -394,6 +394,36 @@ phivneg.death.ages.years <- function(ages,years,mort_s,adultmort,am_cntry,matmor
   
 }
 
+
+#' Probability of death HIV positive adults not in ART
+#' 
+#' The annual probability of death for HIV-positive women who were not on ART 
+#' was based on cumulative mortality reported in Walker, Hill, and Zhao (2012)
+#'
+#' @param hiv_date (integer) year of HIV infection
+#' @param year (integer) current year in simulation 
+phiv.death <- function(hiv_date, year){
+  
+  # cumulative mortality reported in Walker, Hill, and Zhao (2012)
+  
+  aidsmort <- c(0.01,0.02020202,0.041237113,0.053763441,0.079545455,0.098765432,0.123287671,0.15625,0.185185185,0.204545455,0.228571429,	0.296296296,0.263157895,0.357142857,0.333333333,0.333333333,0.5,0.5)
+  
+  
+  if(year<hiv_date){
+    return("error: year<hiv_date")
+    }
+  
+  duration <- year - hiv_date
+  
+  #Assume no one survives more than 18 yrs with HIV
+  if(duration>17){
+    pd <- 1
+  }else{
+    pd <- aidsmort[duration+1]
+  }
+  return(pd)
+}
+
 # Weibull distribution transition probability
 weib.tp <- function(t,scale,shape){
   tp = 1 - exp(-((1/scale)*t^shape - (1/scale)*(t-1)^shape))
