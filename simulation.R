@@ -216,57 +216,6 @@ prob.birth.hiv <- function(ages,sexactive15,arts){
 
 ##### MORTALITY #####
 
-#' Annual probability of death for HIV-negative children for 
-#' each age-year combination
-#' 
-#' Uses the time series for 5q0 and 1q0 estimates from the UN Inter-agency 
-#' Group for Child Mortality Estimation (IGME) (2012) for one country.
-#' 
-#' @param ages (numeric) vector of child's ages
-#' @param yr (numeric) vector of years in simulation
-#' @param u5m_c (data.frame) child mortatily UN Inter-agency Group for Child Mortality Estimation (UN IGME) (2012) for one country
-#' @return (matrix) annual probability of death for  HIV-negative children for 
-#' each age and year combination
-baby.death.nohiv <- function(ages,years,u5m_c){
-
-  # Create empty matrix: years x ages
-  baby.death.nohiv <- matrix(NA,length(years),length(ages) )
-  row.names(baby.death.nohiv) <- years
-  colnames(baby.death.nohiv) <- ages
-  
-  # Fill the matrix
-  for (y in years) { # For each year
-    for (a in ages) { # For each age
-      # if the year is previous to our earliest year of u5m_c, get the first year available
-      if(y<min( u5m_c$year)){
-        yr=min(u5m_c$year)
-      }else{
-        yr=y
-      }
-      
-      # ages less than 0 and grater than 4 have 0 probablity
-      if(a<0){baby.death.nohiv[as.character(y),as.character(a)]=0}
-      if(a>4){baby.death.nohiv[as.character(y),as.character(a)]=0}
-      
-      # Age 0: use 1q0 ratio
-      if(a==0){baby.death.nohiv[as.character(y),as.character(a)]=u5m_c$q1_0[u5m_c$year==yr]}
-      
-      # Age 1: use 1q1 ratio
-      if(a==1){baby.death.nohiv[as.character(y),as.character(a)]=u5m_c$q1_1[u5m_c$year==yr]}   
-      
-      # Age 2: use 1q2 ratio
-      if(a==2){baby.death.nohiv[as.character(y),as.character(a)]=u5m_c$q1_2[u5m_c$year==yr]}   
-      
-      # Age 3: use 1q3 ratio
-      if(a==3){baby.death.nohiv[as.character(y),as.character(a)]=u5m_c$q1_3[u5m_c$year==yr]}   
-      
-      # Age 4: use 1q4 ratio
-      if(a==4){baby.death.nohiv[as.character(y),as.character(a)]=u5m_c$q1_4[u5m_c$year==yr]}   
-    }
-  }
-  
-  baby.death.nohiv  
-}
 
 
 
@@ -443,4 +392,221 @@ phivneg.death.ages.years <- function(ages,years,mort_s,adultmort,am_cntry,matmor
   
   prob.death.all
   
+}
+
+# Weibull distribution transition probability
+weib.tp <- function(t,scale,shape){
+  tp = 1 - exp(-((1/scale)*t^shape - (1/scale)*(t-1)^shape))
+  return(tp)
+}
+
+#' Probability of death for HIV pos adults on ART
+#' 
+#' HIV-positive women on ART faced an annual probability of death that 
+#' was a function of CD4 count at ART initiation, presence or absence of 
+#' symptoms at baseline, and time since initiation. The function was taken 
+#' from the “medium” scenario published by Hallett et al. (2008). 
+#' Women were assigned to “symptomatic” or “non-symptomatic” with probability 0.5, 
+#' based on Braitstein et al. (2006).
+#' 
+#' @param year (integer) Current simulation year
+#' @param cd4 (numeric) CD4 count at ART initiation
+#' @param  art_date (integer) year of ART initiation
+#' @return (numeric) probability of death for HIV positive adults.
+art.surv.vec <- function(year,cd4,art_date){
+  
+  # Shape of the Weibull distribution
+  shape=1.6
+  
+  # pacients have 50% probability of having high viral load ("symptomatic")
+  # ART-LINC ART-CC Lancet 2006 50% patients have high viral load
+  
+  hvl <- ifelse(runif(length(cd4))<0.5,1,0)
+  
+  # If a patient doesnot have high viral load, she has a low viral load. ("non-symptomatic")
+  lvl <- 1 - hvl
+  
+  # Time since ART initiation
+  t = year-art_date
+  
+  # Annual probability of death is a function of CD4 count at ART initiation, 
+  # presence or ausence of symptoms at baseline and time since initiation
+  
+  # Probabilities for "symptomatic" 
+  
+  # CD4 < 50
+  
+  # Computations are similar for other intervals of CD4
+  
+  # Proababiliy during the first year after ART
+  
+  hvl.cd450.y1 <- .109 
+  
+  # select only cases with the right amount of CD4 and one year since ART initiation 
+  
+  hvl.cd450.y1.select <- hvl*ifelse(cd4<50 & t==1,1,0) 
+  
+  # Use Weibull distribution to compute probability after the first year
+  
+  hvl.cd450.yg1 <- weib.tp(t,13.7,shape)
+  
+  # select only cases with the right amount of CD4 and more than one year since ART initiation 
+  
+  hvl.cd450.yg1.select <- hvl*ifelse(cd4<50 & t>1,1,0)
+  
+  # CD4 in  [50,100)
+  
+  hvl.cd4100.y1 <- .67
+  hvl.cd4100.y1.select <- hvl*ifelse(cd4>=50 & cd4<100 & t==1,1,0)
+  hvl.cd4100.yg1 <- weib.tp(t,16,shape)
+  hvl.cd4100.yg1.select <- hvl*ifelse(cd4>=50 & cd4<100 & t>1,1,0)
+  
+  # CD4 in  [100,200)
+  
+  hvl.cd4200.y1 <- .46
+  hvl.cd4200.y1.select <- hvl*ifelse(cd4>=100 & cd4<200 & t==1,1,0)
+  hvl.cd4200.yg1 <- weib.tp(t,16.9,shape)
+  hvl.cd4200.yg1.select <- hvl*ifelse(cd4>=100 & cd4<200 & t>1,1,0)
+  
+  # CD4 in  [200,350)
+  
+  hvl.cd4350.y1 <- .17
+  hvl.cd4350.y1.select <- hvl*ifelse(cd4>=200 & cd4<350 & t==1,1,0)
+  hvl.cd4350.yg1 <- weib.tp(t,23.3,shape)
+  hvl.cd4350.yg1.select <- hvl*ifelse(cd4>=200 & cd4<350 & t>1,1,0)
+  
+  # CD4 >= 350
+  
+  hvl.cd4g350.y1 <- .17
+  hvl.cd4g350.y1.select <- hvl*ifelse(cd4>=350 & t==1,1,0)
+  hvl.cd4g350.yg1 <- weib.tp(t,33.3,shape)
+  hvl.cd4g350.yg1.select <- hvl*ifelse(cd4>=350 & t>1,1,0)
+  
+  # Probabilities for "non-symptomatic" 
+  
+  # Computations are similar as in "symptomatic"
+  
+  # CD4 < 50
+  
+  lvl.cd450.y1 <- .109
+  lvl.cd450.y1.select <- lvl*ifelse(cd4<50 & t==1,1,0)
+  lvl.cd450.yg1 <- weib.tp(t,24.4,shape)
+  lvl.cd450.yg1.select <- lvl*ifelse(cd4<50 & t>1,1,0)
+  
+  # CD4 in  [50,100)
+  
+  lvl.cd4100.y1 <- .67
+  lvl.cd4100.y1.select <- lvl*ifelse(cd4>=50 & cd4<0 & t==1,1,0)
+  lvl.cd4100.yg1 <- weib.tp(t,28.4,shape)
+  lvl.cd4100.yg1.select <- lvl*ifelse(cd4>=50 & cd4<100 & t>1,1,0)
+  
+  # CD4 in  [100,200)
+  
+  lvl.cd4200.y1 <- .46
+  lvl.cd4200.y1.select <- lvl*ifelse(cd4>=100 & cd4<200 & t==1,1,0)
+  lvl.cd4200.yg1 <- weib.tp(t,30.1,shape)
+  lvl.cd4200.yg1.select <- lvl*ifelse(cd4>=100 & cd4<200 & t>1,1,0)
+  
+  # CD4 in  [200,350)
+  
+  lvl.cd4350.y1 <- .17
+  lvl.cd4350.y1.select <- lvl*ifelse(cd4>=200 & cd4<350 & t==1,1,0)
+  lvl.cd4350.yg1 <- weib.tp(t,41.4,shape)
+  lvl.cd4350.yg1.select <- lvl*ifelse(cd4>=200 & cd4<350 & t>1,1,0)
+  
+  # CD4 >= 350
+  
+  lvl.cd4g350.y1 <- .17
+  lvl.cd4g350.y1.select <- lvl*ifelse(cd4>=350 & t==1,1,0)
+  lvl.cd4g350.yg1 <- weib.tp(t,59.1,shape)
+  lvl.cd4g350.yg1.select <- lvl*ifelse(cd4>=350 & t>1,1,0)
+  
+  # Each block above computes a vector of probabilities and a vector that can be used to select which
+  # cases fit in a given category (for example CD4 <50, t==1 and lvl). So, to get the probabilities for each 
+  # case we multiply the selection vector by the probability vector in each category and then summ the results
+  # obtained from all the categories.
+  
+  return(  hvl.cd450.y1.select*hvl.cd450.y1 + hvl.cd450.yg1.select*hvl.cd450.yg1+
+             hvl.cd4100.y1.select*hvl.cd4100.y1 + hvl.cd4100.yg1.select*hvl.cd4100.yg1+
+             hvl.cd4200.y1.select*hvl.cd4200.y1 + hvl.cd4200.yg1.select*hvl.cd4200.yg1+
+             hvl.cd4350.y1.select*hvl.cd4350.y1 + hvl.cd4350.yg1.select*hvl.cd4350.yg1+
+             hvl.cd4g350.y1.select*hvl.cd4g350.y1 + hvl.cd4g350.yg1.select*hvl.cd4g350.yg1+
+             lvl.cd450.y1.select*lvl.cd450.y1 + lvl.cd450.yg1.select*lvl.cd450.yg1+
+             lvl.cd4100.y1.select*lvl.cd4100.y1 + lvl.cd4100.yg1.select*lvl.cd4100.yg1+
+             lvl.cd4200.y1.select*lvl.cd4200.y1 + lvl.cd4200.yg1.select*lvl.cd4200.yg1+
+             lvl.cd4350.y1.select*lvl.cd4350.y1 + lvl.cd4350.yg1.select*lvl.cd4350.yg1+
+             lvl.cd4g350.y1.select*lvl.cd4g350.y1 + lvl.cd4g350.yg1.select*lvl.cd4g350.yg1
+  )
+}
+
+
+#' Annual probability of death for HIV-negative children for 
+#' each age-year combination
+#' 
+#' Uses the time series for 5q0 and 1q0 estimates from the UN Inter-agency 
+#' Group for Child Mortality Estimation (IGME) (2012) for one country.
+#' 
+#' @param ages (numeric) vector of child's ages
+#' @param yr (numeric) vector of years in simulation
+#' @param u5m_c (data.frame) child mortatily UN Inter-agency Group for Child Mortality Estimation (UN IGME) (2012) for one country
+#' @return (matrix) annual probability of death for  HIV-negative children for 
+#' each age and year combination
+baby.death.nohiv <- function(ages,years,u5m_c){
+  
+  # Create empty matrix: years x ages
+  baby.death.nohiv <- matrix(NA,length(years),length(ages) )
+  row.names(baby.death.nohiv) <- years
+  colnames(baby.death.nohiv) <- ages
+  
+  # Fill the matrix
+  for (y in years) { # For each year
+    for (a in ages) { # For each age
+      # if the year is previous to our earliest year of u5m_c, get the first year available
+      if(y<min( u5m_c$year)){
+        yr=min(u5m_c$year)
+      }else{
+        yr=y
+      }
+      
+      # ages less than 0 and grater than 4 have 0 probablity
+      if(a<0){baby.death.nohiv[as.character(y),as.character(a)]=0}
+      if(a>4){baby.death.nohiv[as.character(y),as.character(a)]=0}
+      
+      # Age 0: use 1q0 ratio
+      if(a==0){baby.death.nohiv[as.character(y),as.character(a)]=u5m_c$q1_0[u5m_c$year==yr]}
+      
+      # Age 1: use 1q1 ratio
+      if(a==1){baby.death.nohiv[as.character(y),as.character(a)]=u5m_c$q1_1[u5m_c$year==yr]}   
+      
+      # Age 2: use 1q2 ratio
+      if(a==2){baby.death.nohiv[as.character(y),as.character(a)]=u5m_c$q1_2[u5m_c$year==yr]}   
+      
+      # Age 3: use 1q3 ratio
+      if(a==3){baby.death.nohiv[as.character(y),as.character(a)]=u5m_c$q1_3[u5m_c$year==yr]}   
+      
+      # Age 4: use 1q4 ratio
+      if(a==4){baby.death.nohiv[as.character(y),as.character(a)]=u5m_c$q1_4[u5m_c$year==yr]}   
+    }
+  }
+  
+  baby.death.nohiv  
+}
+
+
+
+# Prob of death for HIV pos children
+#Using Walker Hill cum child mort due to AIDS
+hivchild_mort = c(0.376,  0.2019,	0.1184,	0.07061,	0.0588,	0.0234375)
+ages <- c(-100:120)
+baby.death.hiv <- vector(,length(ages) )
+names(baby.death.hiv) <- ages
+#  head(baby.death.hiv)
+for (a in ages) {
+  if(a<0){baby.death.hiv[as.character(a)]=0}
+  if(a>4){baby.death.hiv[as.character(a)]=0}
+  if(a==0){baby.death.hiv[as.character(a)]=hivchild_mort[1]}   
+  if(a==1){baby.death.hiv[as.character(a)]=hivchild_mort[2]}   
+  if(a==2){baby.death.hiv[as.character(a)]=hivchild_mort[3]}   
+  if(a==3){baby.death.hiv[as.character(a)]=hivchild_mort[4]}   
+  if(a==4){baby.death.hiv[as.character(a)]=hivchild_mort[5]}   
 }

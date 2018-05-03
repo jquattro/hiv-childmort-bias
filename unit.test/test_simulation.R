@@ -318,3 +318,50 @@ test_phivneg.death.ages.years_01 <- function(){
   checkEquals(target,test)
   
 }
+
+
+test_art.surv.vec_01 <- function(){
+  
+  shape=1.6
+  
+  set.seed(12345)
+  
+  year <- 1984
+  
+  art_date <- year - sample(c(1:10),100,replace=TRUE)
+  
+  cd4 <- sample(c(25,75,150,225,400),100,replace=TRUE)
+  
+  
+  
+  
+  set.seed(12345)
+  
+  
+  hvl <- ifelse(runif(length(cd4))<0.5,1,0)
+  
+  y1_prob <- list(hvl=c(CD450=.109,CD4100=.67,CD4200=.46,CD4350=.17,CD4G350=.17),
+       lvl=c(CD450=.109,CD4100=.67,CD4200=.46,CD4350=.17,CD4G350=.17))
+  
+  weib_scale <- list(hvl=c(CD450=13.7,CD4100=16,CD4200=16.9,CD4350=23.3,CD4G350=33.3),
+                  lvl=c(CD450=24.4,CD4100=28.4,CD4200=30.1,CD4350=41.4,CD4G350=59.1))
+  
+  
+  target <- data.frame(hvl=hvl,cd4=cd4,art_date=art_date) %>%
+    mutate(t=year-art_date,
+           cd4_cat=factor(findInterval(cd4,c(50,100,200,350),left.open=FALSE),labels = c("CD450","CD4100","CD4200","CD4350","CD4G350")),
+           hvl_cat=ifelse(hvl==1,"hvl","lvl")) %>% 
+    rowwise() %>%
+    mutate(result=
+      case_when(t==1 ~ y1_prob[[hvl_cat]][[cd4_cat]],
+                t>1 ~ weib.tp(t,weib_scale[[hvl_cat]][[cd4_cat]],shape)
+                )
+    ) %>% pull("result")
+  
+  set.seed(12345)
+  
+  test <- art.surv.vec(year,cd4,art_date)
+
+  
+  checkEquals(target,test)    
+}
