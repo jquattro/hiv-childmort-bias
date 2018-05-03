@@ -232,7 +232,7 @@ prob.birth.hiv <- function(ages,sexactive15,arts){
 #' @param mort_s (data.frame) mortality series for the model country, must contain columns year and q45_15 
 #' from the Institute for Health Metrics and Evaluation.
 #' @param adultmort (data.frame) UN model life table (UN Population Division). models mortality for each 45q15
-#' @param matmort (data.frame) Maternal mortality
+#' @param matmort (data.frame) Maternal mortality per country and year
 #' @param am_cntry (character) model country for adult mortality
 #' @param u5m_c (data.frame) child mortatily UN Inter-agency Group for Child Mortality 
 #' Estimation (UN IGME) (2012) for one country.
@@ -303,7 +303,7 @@ phivneg.death <- function(age,year,mort_s,adultmort,am_cntry,matmort,u5m_c){
     q1_7 = 1-(1-pd5yr)^(1/5)
     pd5yr = adultmort$q.x.n.[adultmort$age==10 & adultmort$E.0.==e0]
     q1_10 = 1-(1-pd5yr)^(1/5)
-    pd1yr = q1_7-((q1_7-q1_10)/2)
+    pd1yr = q1_7-(2*(q1_7-q1_10)/3)
     return(pd1yr)  }
   
   
