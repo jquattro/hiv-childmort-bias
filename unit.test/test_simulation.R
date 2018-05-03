@@ -380,3 +380,17 @@ test_phiv.death_01 <- function(){
   checkEquals(target,test)
       
 }
+
+
+test_baby.death.hiv_01 <- function(){
+  
+  
+  ages <- -1:5
+  
+  target <-  c(0,0.376,  0.2019,	0.1184,	0.07061,	0.0588,0)  
+  names(target) <- ages
+  
+  test <- baby.death.hiv(ages)
+  
+  checkEquals(target,test)
+}

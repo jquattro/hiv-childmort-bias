@@ -288,7 +288,7 @@ phivneg.death <- function(age,year,mort_s,adultmort,am_cntry,matmort,u5m_c){
     return(pd1yr)
   }
   
-  # Ages 8 and 9 interpolate linearly between 7 and 10?
+  # Ages 8 and 9 interpolate linearly between 7 and 10
   
   if(age==8){
     pd5yr = adultmort$q.x.n.[adultmort$age==5 & adultmort$E.0.==e0]
@@ -402,6 +402,7 @@ phivneg.death.ages.years <- function(ages,years,mort_s,adultmort,am_cntry,matmor
 #'
 #' @param hiv_date (integer) year of HIV infection
 #' @param year (integer) current year in simulation 
+#' @return (numeric) Probability of death HIV positive adults not in ART
 phiv.death <- function(hiv_date, year){
   
   # cumulative mortality reported in Walker, Hill, and Zhao (2012)
@@ -624,19 +625,39 @@ baby.death.nohiv <- function(ages,years,u5m_c){
 
 
 
-# Prob of death for HIV pos children
-#Using Walker Hill cum child mort due to AIDS
-hivchild_mort = c(0.376,  0.2019,	0.1184,	0.07061,	0.0588,	0.0234375)
-ages <- c(-100:120)
-baby.death.hiv <- vector(,length(ages) )
-names(baby.death.hiv) <- ages
-#  head(baby.death.hiv)
-for (a in ages) {
-  if(a<0){baby.death.hiv[as.character(a)]=0}
-  if(a>4){baby.death.hiv[as.character(a)]=0}
-  if(a==0){baby.death.hiv[as.character(a)]=hivchild_mort[1]}   
-  if(a==1){baby.death.hiv[as.character(a)]=hivchild_mort[2]}   
-  if(a==2){baby.death.hiv[as.character(a)]=hivchild_mort[3]}   
-  if(a==3){baby.death.hiv[as.character(a)]=hivchild_mort[4]}   
-  if(a==4){baby.death.hiv[as.character(a)]=hivchild_mort[5]}   
+#' Probability of death for HIV positive children
+#' 
+#' Using cumulative child mortality due to AIDS from Walker, Hill, and Zhao (2012).
+#' Probability at ages less than 0 and greater than 4 is zero.
+#' 
+#' @param ages (integer) vector of children ages
+#' @return (numeric) Probability of death for HIV positive children
+baby.death.hiv <- function(ages){
+
+  # cumulative child mortality due to AIDS from Walker, Hill, and Zhao (2012)
+  
+  hivchild_mort = c(0.376,  0.2019,	0.1184,	0.07061,	0.0588,	0.0234375)  
+
+  # Empty vector
+  
+  baby.death.hiv <- vector(,length(ages) )
+  
+  names(baby.death.hiv) <- ages
+  
+  # Assign mortality to each age. For ages <0 and greater than 4 prob is 0
+  for (a in ages) {
+    if(a<0){baby.death.hiv[as.character(a)]=0}
+    if(a>4){baby.death.hiv[as.character(a)]=0}
+    if(a==0){baby.death.hiv[as.character(a)]=hivchild_mort[1]}   
+    if(a==1){baby.death.hiv[as.character(a)]=hivchild_mort[2]}   
+    if(a==2){baby.death.hiv[as.character(a)]=hivchild_mort[3]}   
+    if(a==3){baby.death.hiv[as.character(a)]=hivchild_mort[4]}   
+    if(a==4){baby.death.hiv[as.character(a)]=hivchild_mort[5]}   
+  }
+  
+  baby.death.hiv
+    
 }
+
+
+
