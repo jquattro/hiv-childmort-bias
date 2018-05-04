@@ -394,3 +394,36 @@ test_baby.death.hiv_01 <- function(){
   
   checkEquals(target,test)
 }
+
+
+test_prob.hiv_01 <- function(){
+  
+  hivhogan = read.csv(file.path(base.path,"data/inc_curves.csv"),head=TRUE)
+  
+  curve= "BotswanaUrban"
+  hivinc_s = hivhogan[hivhogan$Country==curve,]  
+
+  set.seed(54343)
+    
+  ages_dist <- sample(paste0("c",seq(15,45,5)),100,replace=TRUE) %>% table() 
+  
+  ages <- seq(17,52,5)
+  
+  year <- 1984
+  
+  hivcol = (year-1970)+2
+  hivinc = hivinc_s[hivcol] %>% as.numeric
+  
+  rel_inc <- c(.594,1.325,1,.752,.635,.551,.356)
+  
+  nomraliz <- ages_dist %>% prop.table() %>% multiply_by(rel_inc) %>% sum %>% as.vector
+  
+  incidence_ref <- hivinc/nomraliz 
+  
+  target <- c(rel_inc*incidence_ref,0)
+  
+  test <- lapply(ages, function(age) prob.hiv(age,year,hivinc_s,ages_dist["c15"],ages_dist["c20"],ages_dist["c25"],ages_dist["c30"],ages_dist["c35"],ages_dist["c40"],ages_dist["c45"])) %>% unlist %>% as.vector
+
+  checkEquals(target,test)
+    
+}

@@ -660,4 +660,99 @@ baby.death.hiv <- function(ages){
 }
 
 
+##### HIV INFECTION #####
+
+#' Annual probability of HIV infection
+#' 
+#' Incidence curves from Dan Hogan, based on data from ANC clinics, 1970-2015
+#' Relative age incidence is from P Heuveline [see Hallett et al 2010 supp for alternative]
+#' Age-specific incidence is adjusted by age structure so that overall incidence matches Hogan & Salomon
+#'
+#' @param age (integer) current age
+#' @param year (integer) current year in simulation
+#' @param hivinc_s (data.frame) HIV incidence curve estimated by Hogan and Salomon (2012) for a specific country
+#' @param c15 (integer) number of people in the simulation between 15 and 19 years
+#' @param c20 (integer) number of people in the simulation between 20 and 24 years
+#' @param c25 (integer) number of people in the simulation between 25 and 29 years
+#' @param c30 (integer) number of people in the simulation between 30 and 34 years
+#' @param c35 (integer) number of people in the simulation between 35 and 39 years
+#' @param c40 (integer) number of people in the simulation between 40 and 44 years
+#' @param c45 (integer) number of people in the simulation between 45 and 49 years
+#' @return (numeric) Annual probability of HIV infection
+prob.hiv <- function(age,year,hivinc_s,c15,c20,c25,c30,c35,c40,c45){
+  
+  # Prob 0 before 1975
+  if(year<1975){
+    return(0)
+  }else{
+    
+    # Get the incidence value for current year
+    hivcol = (year-1970)+2
+    hivinc = hivinc_s[hivcol]
+    
+    # Compute probability at specific ages.
+    
+    # p(HIV=positive|age group,year)=(incidence(year)*relative incidence age group)/sum(relative incidence age group * fraction of age gorup in population)
+    
+    # First compute incidence for the reference group: ages 25-29 
+    
+    inc2529=hivinc/(.594*(c15/(c15+c20+c25+c30+c35+c40+c45))
+                    +1.325*(c20/(c15+c20+c25+c30+c35+c40+c45))
+                    +(c25/(c15+c20+c25+c30+c35+c40+c45))
+                    +.752*(c30/(c15+c20+c25+c30+c35+c40+c45))
+                    +.635*(c35/(c15+c20+c25+c30+c35+c40+c45))
+                    +.551*(c40/(c15+c20+c25+c30+c35+c40+c45))
+                    +.356*(c45/(c15+c20+c25+c30+c35+c40+c45))
+    )
+    
+    # Now, use use age-specific HIV incidence ratios from Heuveline (2003) to compute risk at each age group
+    
+    # Ages 15 to 19
+    if(age>14&age<20){
+      hrisk=.594*inc2529
+      return(hrisk)
+    }
+    
+    # Ages 20 to 24
+    if(age>19&age<25){
+      hrisk=1.325*inc2529
+      return(hrisk)
+    }  
+    
+    # Ages 25 to 29
+    if(age>24&age<30){
+      hrisk=inc2529
+      return(hrisk)
+    }  
+    
+    # Ages 30 to 34
+    if(age>29&age<35){
+      hrisk=.752*inc2529
+      return(hrisk)
+    }
+    
+    # Ages 35 to 39
+    if(age>34&age<40){
+      hrisk=.635*inc2529
+      return(hrisk)
+    }	
+    
+    # Ages 40 to 44
+    if(age>39&age<45){
+      hrisk=.551*inc2529
+      return(hrisk)
+    }	
+    # Ages 45 to 49
+    if(age>44&age<50){
+      hrisk=.356*inc2529
+      return(hrisk)
+    }
+    
+    # People older than 49, have probability 0 
+    if(age>49){
+      hrisk=0
+      return(hrisk)
+    }	
+  }
+}
 
