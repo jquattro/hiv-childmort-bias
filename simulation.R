@@ -664,9 +664,11 @@ baby.death.hiv <- function(ages){
 
 #' Annual probability of HIV infection
 #' 
-#' Incidence curves from Dan Hogan, based on data from ANC clinics, 1970-2015
-#' Relative age incidence is from P Heuveline [see Hallett et al 2010 supp for alternative]
-#' Age-specific incidence is adjusted by age structure so that overall incidence matches Hogan & Salomon
+#' We start selecting the incidence value for the simulation year from 
+#' the incidence values provided in hivinc_s (these are the values for a specific country,taken from 
+#' Dan Hogan and based on data from ANC clinics, 1970-2015. Then, age-specific incidence is obtained using
+#' relative age incidence from P Heuveline. Finally, age-specific incidence is adjusted by age structure so 
+#' that overall incidence matches Hogan & Salomon
 #'
 #' @param age (integer) current age
 #' @param year (integer) current year in simulation
@@ -756,3 +758,31 @@ prob.hiv <- function(age,year,hivinc_s,c15,c20,c25,c30,c35,c40,c45){
   }
 }
 
+#' Probability of mother to child transmission
+#'
+#' Probability of mother-to-child transmission of HIV was taken from Stover et al. (2008). 
+#' Transmission depends on breastfeeding duration and ART. Using estimates for single-dose nevirapine.
+#' 
+#' @param art (integer) 0 if not in ART 1 if in ART
+#' @param bfeed (integer) breastfeeding duration (months) in the general population (must be 6, 12 or 18)
+#' @return (numeric) Probability of mother to child transmission
+vert_trans <- function(art,bfeed){
+  if(bfeed==6 & art==0){
+    vt=.23
+    return(vt)}
+  if(bfeed==6 & art==1){
+    vt=.17
+    return(vt)}
+  if(bfeed==12 & art==0){
+    vt=.305
+    return(vt)}
+  if(bfeed==12 & art==1){
+    vt=.215
+    return(vt)}
+  if(bfeed==18 & art==0){
+    vt=.35
+    return(vt)}
+  if(bfeed==18 & art==1){
+    vt=.26
+    return(vt)}
+}

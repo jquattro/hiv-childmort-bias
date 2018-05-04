@@ -427,3 +427,26 @@ test_prob.hiv_01 <- function(){
   checkEquals(target,test)
     
 }
+
+test_vert_trans_01 <- function(){
+  
+  # no ART
+  
+  bfeed <- c(6,12,18)
+  
+  target <- c(.23,.305,.35)
+  
+  test <- lapply(bfeed,function(x) vert_trans(0,x)) %>% unlist
+
+  checkEquals(target,test)
+
+  # in ART
+  
+  target <- c(.17,.215,.26)
+  
+  test <- lapply(bfeed,function(x) vert_trans(1,x)) %>% unlist
+  
+  checkEquals(target,test)
+  
+      
+}
