@@ -786,3 +786,22 @@ vert_trans <- function(art,bfeed){
     vt=.26
     return(vt)}
 }
+
+
+#' CD4 progression
+#' 
+#' square root of CD4 is assumed to decline linearly over time. Parameters
+#' derived from Hallett (2008) 
+#' 
+#' @param cd4 (numeric) initial CD4 count
+#' @param cd4dec (numeric) CD4 decline per year
+#' @param hivdate (integer) year of HIV infection
+#' @param year (integer) current year in simulation
+#' @return (numeric) updated CD4 count
+cd4.prog <- function(cd4,cd4dec, hivdate,year){
+  a = cd4^(.5)
+  b = cd4dec
+  ts = year-hivdate	
+  cd4new = (a-b*ts)^2
+  return(cd4new)
+}

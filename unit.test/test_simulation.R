@@ -450,3 +450,21 @@ test_vert_trans_01 <- function(){
   
       
 }
+
+test_cd4.prog_01 <- function(){
+  
+  cd4 <- 25.9^2
+  
+  cd4_dec <- 1.32
+  
+  year <- 2000
+  
+  hiv_date <- 1990
+  
+  target <- (25.9-1.32*10)^2
+  
+  test <- cd4.prog(cd4,cd4_dec,hiv_date,year)
+
+  checkEquals(target,test)  
+    
+}
