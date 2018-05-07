@@ -552,3 +552,28 @@ test_birth.counts.by.hiv.status.empty.matrix_01 <- function(){
   checkEquals(target,test)
   
 }
+
+
+test_count.women.age.groups_01 <- function(){
+  
+  set.seed(5434)
+  
+  target <- sample(20:50,7) %>% set_names(paste0("c",seq(15,45,5)))
+  
+  yr <- 1988
+ 
+  
+  dobs <- lapply(names(target),function(age_group){
+    age <- gsub("c","",age_group) %>% as.integer
+    
+    rep(yr-age-2,target[age_group])
+    
+  }) %>% unlist()
+  
+  w <- data.frame(dob=dobs,death_date=NA) %>% bind_rows(data.frame(dob=dobs,death_date=1980))
+
+  
+  test <- count.women.age.groups(yr,w)  
+  
+  checkEquals(target,test)
+}

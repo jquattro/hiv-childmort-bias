@@ -921,4 +921,62 @@ birth.counts.by.hiv.status.empty.matrix <- function(yrstart,yrend){
     
 }
 
+#' Counts the number of women in each age group
+#' 
+#' @param yr (integer) current year in simulation
+#' @param w (matrix) matrix of women
+#' @returm (numeric) named vector of counts for each group, names define the groups
+count.women.age.groups <- function(yr,w){
+  
+  # Initialize counts to 0
+  
+  c15=0
+  c20=0
+  c25=0
+  c30=0
+  c35=0
+  c40=0
+  c45=0
+  
+  # For each age category, count hoy many women are not dead in that age category 
+  
+  
+  # Ages 15-19
+  x = is.na(w[,"death_date"]) & yr-w[,"dob"]<20 & yr-w[,"dob"]>14
+  x1 = !is.na(w[,"death_date"]) & yr-w[,"dob"]<20 & yr-w[,"dob"]>14 & yr<w[,"death_date"] 
+  c15 =   sum(x==T) + sum(x1==T)
+  
+  # Ages 20-24
+  x = is.na(w[,"death_date"]) & yr-w[,"dob"]<25 & yr-w[,"dob"]>19
+  x1 = !is.na(w[,"death_date"]) & yr-w[,"dob"]<25 & yr-w[,"dob"]>19 & yr<w[,"death_date"] 
+  c20 =   sum(x==T) + sum(x1==T)
+  
+  # Ages 25-29
+  x = is.na(w[,"death_date"]) & yr-w[,"dob"]<30 & yr-w[,"dob"]>24
+  x1 = !is.na(w[,"death_date"]) & yr-w[,"dob"]<30 & yr-w[,"dob"]>24 & yr<w[,"death_date"] 
+  c25 =   sum(x==T) + sum(x1==T)
+  
+  # Ages 30-34
+  x = is.na(w[,"death_date"]) & yr-w[,"dob"]<35 & yr-w[,"dob"]>29
+  x1 = !is.na(w[,"death_date"]) & yr-w[,"dob"]<35 & yr-w[,"dob"]>29 & yr<w[,"death_date"] 
+  c30 =   sum(x==T) + sum(x1==T)
+  
+  # Ages 35-39
+  x = is.na(w[,"death_date"]) & yr-w[,"dob"]<40 & yr-w[,"dob"]>34
+  x1 = !is.na(w[,"death_date"]) & yr-w[,"dob"]<40 & yr-w[,"dob"]>34 & yr<w[,"death_date"] 
+  c35 =   sum(x==T) + sum(x1==T)
+  
+  # Ages 40-44
+  x = is.na(w[,"death_date"]) & yr-w[,"dob"]<45 & yr-w[,"dob"]>39
+  x1 = !is.na(w[,"death_date"]) & yr-w[,"dob"]<45 & yr-w[,"dob"]>39 & yr<w[,"death_date"] 
+  c40 =   sum(x==T) + sum(x1==T)
+  
+  # Ages 45-49
+  x = is.na(w[,"death_date"]) & yr-w[,"dob"]<50 & yr-w[,"dob"]>44
+  x1 = !is.na(w[,"death_date"]) & yr-w[,"dob"]<50 & yr-w[,"dob"]>44 & yr<w[,"death_date"] 
+  c45 =   sum(x==T) + sum(x1==T)
 
+  # Return vector with counts
+  
+  c(c15=c15,c20=c20,c25=c25,c30=c30,c35=c35,c40=c40,c45=c45)
+}
