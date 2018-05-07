@@ -880,17 +880,45 @@ birth.counts.by.age.empty.matrix <- function(yrstart,yrend){
   
   births.age.yr <- matrix(NA, (yrend-yrstart+1)*7,4)
   colnames(births.age.yr) <- c("year","agegrp","births","women")
+  
+  # Fill years
+  
   b<-vector()
   for(j in yrstart:yrend){
     a <- rep(j,7)
     b <- c(b,a)
   }
   births.age.yr[,"year"] <- b
+  
+  # Fill age groups
+  
   c <- seq(15,45,5)
   d <- rep(c,length(births.age.yr[,1])/7)
   births.age.yr[,"agegrp"] <- d
   
   births.age.yr
+}
+
+#' Empty matrix for birth counts by HIV status
+#' 
+#' @param yrstart (numeric) simulation start year
+#' @param yrend (numeric) simulation end year
+#' @return (matrix) empty matrix to store birth counts for each HIV status
+birth.counts.by.hiv.status.empty.matrix <- function(yrstart,yrend){
+
+  # The matrix has as one row per year
+  
+  hivbirths.momshiv <- matrix(NA, (yrend-yrstart+1),3)
+  
+  colnames(hivbirths.momshiv) <- c("year","birthpos","birthmompos")
+  
+  # Fill the years
+  
+  hivbirths.momshiv[,"year"]<-seq(yrstart,yrend,1)
+  
+  
+  hivbirths.momshiv
+    
 }
 
 

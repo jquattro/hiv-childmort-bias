@@ -538,3 +538,17 @@ test_birth.counts.by.age.empty.matrix_01 <- function(){
 }
 
 
+test_birth.counts.by.hiv.status.empty.matrix_01 <- function(){
+  
+  yrstart <- 1940
+  
+  yrend <- 1960
+  
+  target <- data.frame(year=yrstart:yrend,birthpos=NA,birthmompos=NA) %>% 
+    as.matrix
+  
+  test <- birth.counts.by.hiv.status.empty.matrix(yrstart,yrend)
+  
+  checkEquals(target,test)
+  
+}
