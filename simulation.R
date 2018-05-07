@@ -840,3 +840,30 @@ initial.DOBs <- function(growth,initialpop){
   
 }
 
+#' Create empty matrix of women
+#' 
+#' Creates an empty matrix of length(dobs) women
+#' 
+#' @param dobs (numeric) vector of years of birth
+#' @returm (matrix) empty matrix of women
+women.empty.matrix <- function(dobs){
+
+  w <- matrix(NA,length(dobs),19)
+  colnames(w) <- c("id", "momid","dob","age","ceb", "hiv","hiv_date","death_date","hivdeath","cd4","cd4dec","art","art_date","art_e","momage","momhiv","male","cd","dead")
+  w[,1] <- c(1:length(dobs))
+  w [,"ceb"]=0
+  w[,"hiv"]=0
+  w[,"hiv_date"]=NA
+  w[,"hivdeath"]=0 
+  w[,"art"]=0 
+  w[,"art_date"]=0
+  w[,"art_e"]=NA
+  w[,"dob"] = dobs
+  w[,"momid"] = NA
+  w[,"male"] = 0
+  w[,"cd"]=0
+  w[,"dead"]=0
+  
+  w
+    
+}

@@ -487,3 +487,37 @@ test_init.dob_01 <-function(){
   checkEquals(target,test)
   
 }
+
+test_women.empty.matrix_01 <- function(){
+  
+  dobs <- 1:300
+  
+  target <- data.frame(id=1:length(dobs),
+                       ceb=0,
+                       hiv=0,
+                       hiv_date=NA,
+                       art=0,
+                       art_date=0,
+                       art_e=NA,
+                       dob=dobs,
+                       momid=NA,
+                       male=0,
+                       cd=0,
+                       dead=0,
+                       age=NA,
+                       death_date=NA,
+                       hivdeath=0,
+                       cd4=NA,
+                       cd4dec=NA,
+                       momage=NA,
+                       momhiv=NA) %>%
+    select("id", "momid","dob","age","ceb", "hiv","hiv_date","death_date","hivdeath","cd4","cd4dec","art","art_date","art_e","momage","momhiv","male","cd","dead")  %>% 
+    as.matrix()
+  
+  
+  
+  test <- women.empty.matrix(dobs)
+
+  checkEquals(target,test)
+    
+}
