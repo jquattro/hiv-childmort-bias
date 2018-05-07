@@ -867,3 +867,30 @@ women.empty.matrix <- function(dobs){
   w
     
 }
+
+
+#' Empty matrix for birth counts by age group
+#' 
+#' @param yrstart (numeric) simulation start year
+#' @param yrend (numeric) simulation end year
+#' @return (matrix) empty matrix to store birth counts for each age group
+birth.counts.by.age.empty.matrix <- function(yrstart,yrend){
+
+  # The matrix has as many rows as the length of the simulation times 7 age groups
+  
+  births.age.yr <- matrix(NA, (yrend-yrstart+1)*7,4)
+  colnames(births.age.yr) <- c("year","agegrp","births","women")
+  b<-vector()
+  for(j in yrstart:yrend){
+    a <- rep(j,7)
+    b <- c(b,a)
+  }
+  births.age.yr[,"year"] <- b
+  c <- seq(15,45,5)
+  d <- rep(c,length(births.age.yr[,1])/7)
+  births.age.yr[,"agegrp"] <- d
+  
+  births.age.yr
+}
+
+

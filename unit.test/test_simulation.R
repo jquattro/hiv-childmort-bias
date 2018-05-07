@@ -521,3 +521,20 @@ test_women.empty.matrix_01 <- function(){
   checkEquals(target,test)
     
 }
+
+test_birth.counts.by.age.empty.matrix_01 <- function(){
+  
+  yrstart <- 1940
+  
+  yrend <- 1960
+  
+  target <- data.frame(year=rep(yrstart:yrend,each=7),agegrp=rep(seq(15,45,5),1960-1940+1),births=NA,women=NA) %>% 
+    as.matrix
+  
+  test <- birth.counts.by.age.empty.matrix(yrstart,yrend)
+  
+  checkEquals(target,test)
+  
+}
+
+
