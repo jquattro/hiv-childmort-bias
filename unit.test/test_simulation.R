@@ -468,3 +468,22 @@ test_cd4.prog_01 <- function(){
   checkEquals(target,test)  
     
 }
+
+
+test_init.dob_01 <-function(){
+  
+  
+  initialpop=100
+  
+  growth=0.03
+  
+  
+  population <- Reduce(function(x,y) x*(1+growth),1:50,accumulate = TRUE)*initialpop %>% floor
+  
+  target <- mapply(function(pop,year) rep(year,pop), population,1897:(1896+50)) %>% unlist
+  
+  test <- initial.DOBs(growth,initialpop)
+  
+  checkEquals(target,test)
+  
+}

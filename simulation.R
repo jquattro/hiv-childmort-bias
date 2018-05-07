@@ -805,3 +805,38 @@ cd4.prog <- function(cd4,cd4dec, hivdate,year){
   cd4new = (a-b*ts)^2
   return(cd4new)
 }
+
+##### SIMULATION #####
+
+
+#' Date of birth for initial age structure
+#' 
+#' @param growth (numeric) yearly population growth rate
+#' @param initialpop (integer) initial population
+#' @return (numeric) date of birth
+initial.DOBs <- function(growth,initialpop){
+
+  # Compute total population for each step
+  
+  ratios <- rep(1,50)
+  for(i in 1:50){
+    ratios[i+1]=ratios[i]*(1+growth)
+  }
+  population = ratios*initialpop
+  
+  # Compute DOB for each step, starting at 1897
+  
+  dobs = NA
+  counter=1
+  for(i in 1:50){
+    k = population[i]
+    for(j in 1:k){
+      dobs[counter]=i+1896
+      counter=counter+1
+    }
+  }
+  
+  dobs  
+  
+}
+
