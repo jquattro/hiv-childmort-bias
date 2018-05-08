@@ -884,12 +884,12 @@ initial.DOBs <- function(growth,initialpop){
   
 }
 
-#' Create empty matrix of women
+#' Create empty population matrix of women
 #' 
 #' Creates an empty matrix of length(dobs) women
 #' 
 #' @param dobs (numeric) vector of years of birth
-#' @returm (matrix) empty matrix of women
+#' @returm (matrix) empty population matrix with women only
 women.empty.matrix <- function(dobs){
 
   w <- matrix(NA,length(dobs),19)
@@ -966,10 +966,10 @@ birth.counts.by.hiv.status.empty.matrix <- function(yrstart,yrend){
     
 }
 
-#' Counts the number of women in each age group
+#' Counts the number of people in each age group
 #' 
 #' @param yr (integer) current year in simulation
-#' @param w (matrix) matrix of women
+#' @param w (matrix) matrix of population
 #' @returm (numeric) named vector of counts for each group, names define the groups
 count.women.age.groups <- function(yr,w){
   
@@ -983,7 +983,7 @@ count.women.age.groups <- function(yr,w){
   c40=0
   c45=0
   
-  # For each age category, count hoy many women are not dead in that age category 
+  # For each age category, count hoy many people are not dead in that age category 
   
   
   # Ages 15-19
@@ -1032,8 +1032,8 @@ count.women.age.groups <- function(yr,w){
 #' Current age = current year - year of birth
 #' 
 #' @param yr (integer) current year in simulation
-#' @param w (matrix) matrix of women
-#' @return (matrix) matrix of women with ages updated for the current year
+#' @param w (matrix) Population matrix
+#' @return (matrix) Population matrix with ages updated for the current year
 update.women.age <- function(yr,w){
   
   # current age = current year - year of birth
@@ -1050,7 +1050,7 @@ update.women.age <- function(yr,w){
 #' 
 #' 
 #' @param yr (integer) current year in simulation
-#' @param w (matrix) Matrix of women
+#' @param w (matrix) Population matrix
 #' @param prob.birth.all (matrix) Annual probability of birth as a function of calendar 
 #' year and mother’s age. HIV negative. As given by `prob.birth.ages.years`.
 #' @param prob.birth.hiv (matrix) Reduction in prob of giving birth due to HIV for each art, age combination. As provided by `prob.birth.hiv`
@@ -1081,4 +1081,55 @@ new.babies <- function(yr,w,prob.birth.all,prob.birth.hiv){
   newbaby <- runif(nrow(w))<prob.birth.thisyear.adj
   
   newbaby
+}
+
+
+#' Creates new people matrix for newborns
+#' 
+#' Probability of being male is 102.5/202.5
+#' 
+#' @param yr (integer) current year in simulation
+#' @param w (matrix) Population matrix
+#' @param newbaby (logical) Vector of length=nrow(w). Each element determines whether a woman gives birth 
+#' that year (TRUE) or not (FALSE). As computed by `new.babies`
+#' @return (matrix) Population matrix
+next.babies <- function(yr,w,newbaby){
+
+  # Empty matrix with the same columns as w and as many rows as newborns
+  nextbabies <- matrix(NA,length(which(newbaby)),length(w[1,]))
+  colnames(nextbabies) <- colnames(w)
+  
+  # Fill the columns
+  
+  # Mother's data
+  nextbabies[,"momid"] <- w[newbaby,"id"]
+  nextbabies[,"momage"] <- w[newbaby,"age"]
+  nextbabies[,"momhiv"] <- w[newbaby,"hiv"]
+  nextbabies[,"art"] <- w[newbaby,"art"]
+  
+  # Newborn data
+  nextbabies[,"dob"] <- yr
+  nextbabies[,"id"] <- seq(max(w[,"id"])+1,max(w[,"id"])+length(nextbabies[,"id"]),1) # New Ids
+  nextbabies[,"age"] <- 0
+  nextbabies[,"ceb"] <- 0
+  nextbabies[,"cd"] <- 0
+  
+  # Determine randomly if is male/female
+  nextbabies[,"male"] <- as.numeric(runif(nrow(nextbabies))<=102.5/202.5)  
+  
+  nextbabies
+    
+}
+
+#' Updates ceb when individuals have a baby
+#' 
+#' @param w (matrix) Population matrix
+#' @param newbaby (logical) Vector of length=nrow(w). Each element determines whether a woman gives birth 
+#' that year (TRUE) or not (FALSE). As computed by `new.babies`
+#' @return (matrix) Population matrix updated
+update.women.ceb <- function(w,newbaby){
+
+  w[newbaby,"ceb"] <- w[newbaby,"ceb"]+1
+  
+  w
 }

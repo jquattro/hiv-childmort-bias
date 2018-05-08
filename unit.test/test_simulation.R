@@ -669,3 +669,67 @@ test_new.babies_01 <- function(){
 
   
 }
+
+
+test_next.babies_01 <- function(){
+  
+  
+  fertcountry <- "Botswana"
+  
+  worldfert <-  read.csv(file.path(base.path,"data/world_fert.csv"),head=TRUE)
+  tfr_series <-  read.csv(file.path(base.path,"data/tfr_gapminder_long.csv"),head=TRUE)
+  
+  tfr_s <-  tfr_series[tfr_series[,"country"]==fertcountry,]
+  asfr_s <- worldfert[worldfert[,"country"]==fertcountry,]
+  
+  years <- c(1946:2010)
+  ages <- c(-100:120)
+  
+  prob.birth.all <- prob.birth.ages.years(ages,years,asfr_s,tfr_s)
+  
+  arts <- c(0,1)
+  
+  
+  sexactive15 <- 0.6
+  
+  prob.birth.hiv <-  prob.birth.hiv(ages,sexactive15,arts)
+  
+  yr <- 1988
+  set.seed(100)
+  w <- expand.grid(hiv=c(0,1),art=c(0,1),male=c(0,1),age=0:60) %>% filter(!(hiv==0 & art==1)) %>% mutate(id=1:nrow(.),momid=NA,momage=NA,momhiv=NA,dob=yr-age,ceb=NA,cd=NA) %>% as.matrix
+  
+  
+  
+  newbaby <- new.babies(yr,w,prob.birth.all,prob.birth.hiv) %>% as.vector
+  
+  set.seed(200)
+  target <- w %>% as.data.frame() %>% filter(newbaby) %>% select(momid=id,momage=age,momhiv=hiv,art) %>% mutate(id=(max(w[,"id"])+1):(max(w[,"id"])+nrow(.)),dob=yr,ceb=0,cd=0,male=as.numeric(runif(nrow(.))<=102.5/202.5),age=0,hiv=NA  )
+  
+  
+  set.seed(200)
+  
+  
+  test <- next.babies(yr,w,newbaby)
+  
+  
+  target <- target %>% select(one_of(dimnames(test)[[2]])) %>% as.matrix
+
+  checkEquals(target,test)  
+}
+
+test_update.women.ceb_01 <- function(){
+  
+  set.seed(100)
+
+  w <- data.frame(id=1:10,ceb=sample(1:3,10,replace = TRUE)) %>% as.matrix
+
+  newbaby <- sample(c(TRUE,FALSE),10,replace = TRUE)
+
+  
+  target <- w %>% as.data.frame() %>% mutate(ceb=ifelse(newbaby,ceb+1,ceb)) %>% as.matrix
+  
+  
+  test <- update.women.ceb(w,newbaby)
+  
+  checkEquals(target,test)
+}
