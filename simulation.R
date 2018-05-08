@@ -758,6 +758,50 @@ prob.hiv <- function(age,year,hivinc_s,c15,c20,c25,c30,c35,c40,c45){
   }
 }
 
+
+#' Annual probability of HIV infection for each age year combination
+#' 
+#' Uses phivneg.death to compute annual probability of death for each age-year combination
+#' 
+#' @param ages (numeric) vector of ages
+#' @param years (numeric) vector of years in simulation
+#' @param hivinc_s (data.frame) HIV incidence curve estimated by Hogan and Salomon (2012) for a specific country
+#' @param c15 (integer) number of people in the simulation between 15 and 19 years
+#' @param c20 (integer) number of people in the simulation between 20 and 24 years
+#' @param c25 (integer) number of people in the simulation between 25 and 29 years
+#' @param c30 (integer) number of people in the simulation between 30 and 34 years
+#' @param c35 (integer) number of people in the simulation between 35 and 39 years
+#' @param c40 (integer) number of people in the simulation between 40 and 44 years
+#' @param c45 (integer) number of people in the simulation between 45 and 49 years
+#' @return (matrix) (length(ages) x length(years)) Annual probability of HIV infection.
+prob.hiv.ages.years <- function(ages,years,hivinc_s,c15,c20,c25,c30,c35,c40,c45){
+  
+  # Create empty matrix (length(ages) x length(years))
+  
+  prob.hiv.vec <- matrix(NA,length(ages),length(years))
+  row.names(prob.hiv.vec) <- ages
+  colnames(prob.hiv.vec) <- years
+  
+  # Compute probability of HIV for each age an year. 
+  for (a in ages) {
+    for (y in years) {
+      
+      # probability of HIV
+      res <- as.numeric(prob.hiv(a,y,hivinc_s,c15,c20,c25,c30,c35,c40,c45))
+      
+      
+      if (length(res)>0 ){
+        prob.hiv.vec[as.character(a),as.character(y)] <- res
+      }else { # If we don't get a result, that means that the age/year is outside our range, assign probability 0
+        prob.hiv.vec[as.character(a),as.character(y)] <- 0
+      }
+    }
+  }  
+  
+  prob.hiv.vec  
+}
+
+
 #' Probability of mother to child transmission
 #'
 #' Probability of mother-to-child transmission of HIV was taken from Stover et al. (2008). 
@@ -980,3 +1024,5 @@ count.women.age.groups <- function(yr,w){
   
   c(c15=c15,c20=c20,c25=c25,c30=c30,c35=c35,c40=c40,c45=c45)
 }
+
+

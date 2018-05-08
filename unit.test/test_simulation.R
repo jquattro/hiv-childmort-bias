@@ -428,6 +428,36 @@ test_prob.hiv_01 <- function(){
     
 }
 
+test_prob.hiv.ages.years_01 <- function(){
+  
+  years <- c(1946:2010)
+  ages <- c(-100:120)
+  
+  hivhogan = read.csv(file.path(base.path,"data/inc_curves.csv"),head=TRUE)
+  
+  curve= "BotswanaUrban"
+  hivinc_s = hivhogan[hivhogan$Country==curve,]  
+  
+  set.seed(54343)
+  
+  ages_dist <- sample(paste0("c",seq(15,45,5)),100,replace=TRUE) %>% table() 
+  
+  target <- expand.grid(years,ages) %>% apply(1,function(x){
+    
+    pr <- prob.hiv(x[2],x[1],hivinc_s,ages_dist["c15"],ages_dist["c20"],ages_dist["c25"],ages_dist["c30"],ages_dist["c35"],ages_dist["c40"],ages_dist["c45"]) %>% as.numeric
+    
+    data.frame(age=x[2],year=x[1],result=ifelse(length(pr)==0,0,pr))
+    
+  }) %>% bind_rows() %>% spread(year,result) %>% set_rownames(.$age)  %>% select(-age) %>% as.matrix 
+  
+  
+
+  test <- prob.hiv.ages.years(ages,years,hivinc_s,ages_dist["c15"],ages_dist["c20"],ages_dist["c25"],ages_dist["c30"],ages_dist["c35"],ages_dist["c40"],ages_dist["c45"])
+
+  checkEquals(target,test)    
+}
+
+
 test_vert_trans_01 <- function(){
   
   # no ART
@@ -577,3 +607,5 @@ test_count.women.age.groups_01 <- function(){
   
   checkEquals(target,test)
 }
+
+
