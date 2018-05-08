@@ -609,3 +609,61 @@ test_count.women.age.groups_01 <- function(){
 }
 
 
+test_update.women.age_01 <- function(){
+  
+  yr <- 1988
+  set.seed(100)
+  w <- data.frame(id=1:10,dob=sample(1950,2000,10),age=NA)
+
+  target <-   w %>% mutate(age=yr-dob) %>%  as.matrix
+  
+  test <- update.women.age(yr,w%>% as.matrix)
+  
+  checkEquals(target,test)
+  
+}
+
+
+test_new.babies_01 <- function(){
+  
+  
+  fertcountry <- "Botswana"
+  
+  worldfert <-  read.csv(file.path(base.path,"data/world_fert.csv"),head=TRUE)
+  tfr_series <-  read.csv(file.path(base.path,"data/tfr_gapminder_long.csv"),head=TRUE)
+  
+  tfr_s <-  tfr_series[tfr_series[,"country"]==fertcountry,]
+  asfr_s <- worldfert[worldfert[,"country"]==fertcountry,]
+  
+  years <- c(1946:2010)
+  ages <- c(-100:120)
+  
+  prob.birth.all <- prob.birth.ages.years(ages,years,asfr_s,tfr_s)
+  
+  arts <- c(0,1)
+  
+  
+  sexactive15 <- 0.6
+  
+  prob.birth.hiv <-  prob.birth.hiv(ages,sexactive15,arts)
+  
+  yr <- 1988
+  
+  w <- expand.grid(hiv=c(0,1),art=c(0,1),male=c(0,1),age=0:60) %>% filter(!(hiv==0 & art==1)) %>% as.matrix
+  
+  set.seed(100)
+  
+  target <- w %>% data.frame %>% mutate(prob.birth=case_when(male==1~ 0,
+                                        hiv==0 ~ prob.birth.all[as.character(yr),as.character(age)],
+                                        hiv==1 & art==0 ~ prob.birth.all[as.character(yr),as.character(age)] * prob.birth.hiv[as.character(age),"0"],
+                                        hiv==1 & art==1 ~ prob.birth.all[as.character(yr),as.character(age)] * prob.birth.hiv[as.character(age),"1"]
+                                        )) %>% mutate(newbaby=runif(nrow(.))<prob.birth) %>% pull("newbaby")
+  
+  set.seed(100)
+  
+  test <- new.babies(yr,w,prob.birth.all,prob.birth.hiv) %>% as.vector
+
+  checkEquals(target,test)    
+
+  
+}

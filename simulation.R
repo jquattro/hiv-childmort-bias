@@ -1026,3 +1026,58 @@ count.women.age.groups <- function(yr,w){
 }
 
 
+#' Updates women age
+#' 
+#' Current age = current year - year of birth
+#' 
+#' @param yr (integer) current year in simulation
+#' @param w (matrix) matrix of women
+#' @return (matrix) matrix of women with ages updated for the current year
+update.women.age <- function(yr,w){
+  
+  # current age = current year - year of birth
+  
+  w[,"age"] = yr-w[,"dob"]
+  
+  w
+  
+}
+
+#' Randomly determine if a women has a child this year according to her probability 
+#' of giving birth this year.
+#' 
+#' 
+#' 
+#' @param yr (integer) current year in simulation
+#' @param w (matrix) Matrix of women
+#' @param prob.birth.all (matrix) Annual probability of birth as a function of calendar 
+#' year and mother’s age. HIV negative. As given by `prob.birth.ages.years`.
+#' @param prob.birth.hiv (matrix) Reduction in prob of giving birth due to HIV for each art, age combination. As provided by `prob.birth.hiv`
+#' @return (logical) Vector of length=nrow(w). Each element determines whether a woman gives birth 
+#' that year (TRUE) or not (FALSE).
+new.babies <- function(yr,w,prob.birth.all,prob.birth.hiv){
+  
+  # Get probability of birth this year for each woman in w. HIV negative
+  prob.birth.thisyear <- prob.birth.all[as.character(yr),as.character(w[,"age"])]
+  
+  # Compute probability of birth thi yeat for each woman. HIV positive in ART
+  prob.birth.thisyear.hiv.art <- prob.birth.thisyear*prob.birth.hiv[as.character(w[,"age"]),"1"]
+  
+  # Compute probability of birth thi yeat for each woman. HIV positive not in ART
+  prob.birth.thisyear.hiv.noart <- prob.birth.thisyear*prob.birth.hiv[as.character(w[,"age"]),"0"]
+  
+  # Combine the three vectors above to get the probability of birth for each woman
+  
+  prob.birth.thisyear.adj <- (1-w[,"male"])* # If male, prob 0
+    (prob.birth.thisyear*(1-w[,"hiv"]) + # Woman HIV negative
+       prob.birth.thisyear.hiv.art*w[,'art'] + # Woman HIV positive in ART
+       prob.birth.thisyear.hiv.noart*(1-w[,'art'])*w[,'hiv']) # Woman HIV positive not in ART
+  
+  # Randomly create vector of TRUE (birth) or FALSE (no birth), according to the probability of birth of each
+  # individual.
+  
+  
+  newbaby <- runif(nrow(w))<prob.birth.thisyear.adj
+  
+  newbaby
+}
