@@ -918,13 +918,14 @@ women.empty.matrix <- function(dobs){
 #' @param yrstart (numeric) simulation start year
 #' @param yrend (numeric) simulation end year
 #' @return (matrix) empty matrix to store birth counts for each age group
+
 birth.counts.by.age.empty.matrix <- function(yrstart,yrend){
 
   # The matrix has as many rows as the length of the simulation times 7 age groups
   
   births.age.yr <- matrix(NA, (yrend-yrstart+1)*7,4)
   colnames(births.age.yr) <- c("year","agegrp","births","women")
-  
+
   # Fill years
   
   b<-vector()
@@ -933,7 +934,6 @@ birth.counts.by.age.empty.matrix <- function(yrstart,yrend){
     b <- c(b,a)
   }
   births.age.yr[,"year"] <- b
-  
   # Fill age groups
   
   c <- seq(15,45,5)
@@ -942,6 +942,7 @@ birth.counts.by.age.empty.matrix <- function(yrstart,yrend){
   
   births.age.yr
 }
+
 
 #' Empty matrix for birth counts by HIV status
 #' 
