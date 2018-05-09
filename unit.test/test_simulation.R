@@ -570,6 +570,54 @@ test_birth.counts.by.age.empty.matrix_01 <- function(){
 }
 
 
+test_update.birth.counts.by.age_01 <- function(){
+  
+  fertcountry <- "Botswana"
+  
+  worldfert <-  read.csv(file.path(base.path,"data/world_fert.csv"),head=TRUE)
+  tfr_series <-  read.csv(file.path(base.path,"data/tfr_gapminder_long.csv"),head=TRUE)
+  
+  tfr_s <-  tfr_series[tfr_series[,"country"]==fertcountry,]
+  asfr_s <- worldfert[worldfert[,"country"]==fertcountry,]
+  
+  years <- c(1946:2010)
+  ages <- c(-100:120)
+  
+  prob.birth.all <- prob.birth.ages.years(ages,years,asfr_s,tfr_s)
+  
+  arts <- c(0,1)
+  
+  
+  sexactive15 <- 0.6
+  
+  prob.birth.hiv <-  prob.birth.hiv(ages,sexactive15,arts)
+  
+  yr <- 1988
+  set.seed(100)
+  w <- expand.grid(hiv=c(0,1),art=c(0,1),male=c(0,1),age=0:60) %>% filter(!(hiv==0 & art==1)) %>% mutate(id=1:nrow(.),momid=NA,momage=NA,momhiv=NA,dob=yr-age,ceb=NA,cd=NA) %>% as.matrix
+  
+  
+  
+  newbaby <- new.babies(yr,w,prob.birth.all,prob.birth.hiv) %>% as.vector
+  
+  
+  nextbabies <- next.babies(yr,w,newbaby)
+  
+  
+  
+  births.age.yr <- birth.counts.by.age.empty.matrix(min(years),max(years))
+  
+  target <- nextbabies %>% as.data.frame() %>% mutate(agegrp=cut(momage,breaks = c(15,20,25,30,35,40,45,50),right = FALSE,labels = c("15","20","25","30","35","40","45"))) %>% count(agegrp) %>% complete(agegrp) %>% mutate(year=yr,agegrp=as.integer(as.character(agegrp)),n=ifelse(is.na(n),0,n))
+  
+  target <- births.age.yr %>% as.data.frame() %>% left_join(target) %>% mutate(births=n) %>% select(-n) %>% as.matrix
+  
+  test <- update.birth.counts.by.age(births.age.yr,nextbabies,yr)
+  
+  
+  checkEquals(target,test)  
+  
+}
+
 test_birth.counts.by.hiv.status.empty.matrix_01 <- function(){
   
   yrstart <- 1940
@@ -585,6 +633,54 @@ test_birth.counts.by.hiv.status.empty.matrix_01 <- function(){
   
 }
 
+test_update.birth.counts.by.hiv.status_01 <-function(){
+  
+  
+  fertcountry <- "Botswana"
+  
+  worldfert <-  read.csv(file.path(base.path,"data/world_fert.csv"),head=TRUE)
+  tfr_series <-  read.csv(file.path(base.path,"data/tfr_gapminder_long.csv"),head=TRUE)
+  
+  tfr_s <-  tfr_series[tfr_series[,"country"]==fertcountry,]
+  asfr_s <- worldfert[worldfert[,"country"]==fertcountry,]
+  
+  years <- c(1946:2010)
+  ages <- c(-100:120)
+  
+  prob.birth.all <- prob.birth.ages.years(ages,years,asfr_s,tfr_s)
+  
+  arts <- c(0,1)
+  
+  
+  sexactive15 <- 0.6
+  
+  prob.birth.hiv <-  prob.birth.hiv(ages,sexactive15,arts)
+  
+  yr <- 1988
+  set.seed(100)
+  w <- expand.grid(hiv=c(0,1),art=c(0,1),male=c(0,1),age=0:60) %>% filter(!(hiv==0 & art==1)) %>% mutate(id=1:nrow(.),momid=NA,momage=NA,momhiv=NA,dob=yr-age,ceb=NA,cd=NA) %>% as.matrix
+  
+  
+  
+  newbaby <- new.babies(yr,w,prob.birth.all,prob.birth.hiv) %>% as.vector
+  
+  
+  nextbabies <- next.babies(yr,w,newbaby)
+  
+  
+  
+  hivbirths.momshiv <- birth.counts.by.hiv.status.empty.matrix(min(years),max(years))
+  
+  target <- nextbabies %>% as.data.frame() %>% mutate(hiv_status=cut(momhiv,breaks = c(-1,0,1),right = TRUE,labels = c("neg","pos"))) %>% count(hiv_status) %>% complete(hiv_status) %>% mutate(year=yr,n=ifelse(is.na(n),0,n)) %>% spread(hiv_status,n)
+  
+  target <- hivbirths.momshiv %>% as.data.frame() %>% left_join(target) %>% mutate(birthmompos=pos) %>% select(-pos,-neg) %>% as.matrix
+  
+  test <- update.birth.counts.by.hiv.status(hivbirths.momshiv,nextbabies,yr)
+  
+  
+  checkEquals(target,test)  
+  
+}
 
 test_count.women.age.groups_01 <- function(){
   
@@ -735,50 +831,3 @@ test_update.women.ceb_01 <- function(){
 }
 
 
-test_update.birth.counts.by.age_01 <- function(){
-  
-  fertcountry <- "Botswana"
-  
-  worldfert <-  read.csv(file.path(base.path,"data/world_fert.csv"),head=TRUE)
-  tfr_series <-  read.csv(file.path(base.path,"data/tfr_gapminder_long.csv"),head=TRUE)
-  
-  tfr_s <-  tfr_series[tfr_series[,"country"]==fertcountry,]
-  asfr_s <- worldfert[worldfert[,"country"]==fertcountry,]
-  
-  years <- c(1946:2010)
-  ages <- c(-100:120)
-  
-  prob.birth.all <- prob.birth.ages.years(ages,years,asfr_s,tfr_s)
-  
-  arts <- c(0,1)
-  
-  
-  sexactive15 <- 0.6
-  
-  prob.birth.hiv <-  prob.birth.hiv(ages,sexactive15,arts)
-  
-  yr <- 1988
-  set.seed(100)
-  w <- expand.grid(hiv=c(0,1),art=c(0,1),male=c(0,1),age=0:60) %>% filter(!(hiv==0 & art==1)) %>% mutate(id=1:nrow(.),momid=NA,momage=NA,momhiv=NA,dob=yr-age,ceb=NA,cd=NA) %>% as.matrix
-  
-  
-  
-  newbaby <- new.babies(yr,w,prob.birth.all,prob.birth.hiv) %>% as.vector
-  
-
-  nextbabies <- next.babies(yr,w,newbaby)
-
-  
-
-  births.age.yr <- birth.counts.by.age.empty.matrix(min(years),max(years))
-  
-  target <- nextbabies %>% as.data.frame() %>% mutate(agegrp=cut(momage,breaks = c(15,20,25,30,35,40,45,50),right = FALSE,labels = c("15","20","25","30","35","40","45"))) %>% count(agegrp) %>% complete(agegrp) %>% mutate(year=yr,agegrp=as.integer(as.character(agegrp)),n=ifelse(is.na(n),0,n))
-  
-  target <- births.age.yr %>% as.data.frame() %>% left_join(target) %>% mutate(births=n) %>% select(-n) %>% as.matrix
-  
-  test <- update.birth.counts.by.age(births.age.yr,nextbabies,yr)
-
-  
-  checkEquals(target,test)  
-  
-}

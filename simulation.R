@@ -949,7 +949,7 @@ birth.counts.by.age.empty.matrix <- function(yrstart,yrend){
 #' like the one provided by `birth.counts.by.age.empty.matrix`
 #' @param nextbabies (matrix) population matrix of newborns, like the one provided by `next.babies`
 #' @param yr (integer) current year in simulation
-#' @return (matrix)
+#' @return (matrix) Matrix of birth counts by age and year
 update.birth.counts.by.age <- function(births.age.yr,nextbabies,yr){
   
   # Compute number of births per mother age category and store in births.age.yr
@@ -1001,6 +1001,22 @@ birth.counts.by.hiv.status.empty.matrix <- function(yrstart,yrend){
     
 }
 
+#' Updates birth count by HIV status for one year
+#' 
+#' @param hivbirths.momshiv (matrix) Matrix of birth counts by HIV status and year, 
+#' like the one provided by `birth.counts.by.hiv.status.empty.matrix`
+#' @param nextbabies (matrix) population matrix of newborns, like the one provided by `next.babies`
+#' @param yr (integer) current year in simulation
+#' @return (matrix) Matrix of birth counts by HIV status and year
+update.birth.counts.by.hiv.status <- function(hivbirths.momshiv,nextbabies,yr){
+  
+  # Update birth counts for HIV positive moms.
+  
+  hivbirths.momshiv[,"birthmompos"][hivbirths.momshiv[,"year"]==yr]<-sum(nextbabies[,"momhiv"]==1)
+  
+  hivbirths.momshiv
+  
+}
 #' Counts the number of people in each age group
 #' 
 #' @param yr (integer) current year in simulation
