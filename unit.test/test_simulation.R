@@ -671,13 +671,18 @@ test_update.birth.counts.by.hiv.status_01 <-function(){
   
   nextbabies <- next.babies(yr,w,newbaby)
   
+  bfeed <- 18
+  prob.vt.noart <- vert_trans(0,bfeed)
+  prob.vt.art <- vert_trans(1,bfeed)
+  
+  nextbabies <- vertical.transmision.HIV(prob.vt.art,prob.vt.noart,nextbabies)
   
   
   hivbirths.momshiv <- birth.counts.by.hiv.status.empty.matrix(min(years),max(years))
   
-  target <- nextbabies %>% as.data.frame() %>% mutate(hiv_status=cut(momhiv,breaks = c(-1,0,1),right = TRUE,labels = c("neg","pos"))) %>% count(hiv_status) %>% complete(hiv_status) %>% mutate(year=yr,n=ifelse(is.na(n),0,n)) %>% spread(hiv_status,n)
+  target <- nextbabies %>% as.data.frame() %>% mutate(hiv_status=cut(momhiv,breaks = c(-1,0,1),right = TRUE,labels = c("neg","pos"))) %>% count(hiv_status) %>% complete(hiv_status) %>% mutate(year=yr,n=ifelse(is.na(n),0,n)) %>% spread(hiv_status,n) %>% mutate(npos=sum(nextbabies[,"hiv"]))
   
-  target <- hivbirths.momshiv %>% as.data.frame() %>% left_join(target) %>% mutate(birthmompos=pos) %>% select(-pos,-neg) %>% as.matrix
+  target <- hivbirths.momshiv %>% as.data.frame() %>% left_join(target) %>% mutate(birthmompos=pos,birthpos=npos) %>% select(-pos,-neg,-npos) %>% as.matrix
   
   test <- update.birth.counts.by.hiv.status(hivbirths.momshiv,nextbabies,yr)
   

@@ -1031,6 +1031,9 @@ update.birth.counts.by.hiv.status <- function(hivbirths.momshiv,nextbabies,yr){
   
   hivbirths.momshiv[,"birthmompos"][hivbirths.momshiv[,"year"]==yr]<-sum(nextbabies[,"momhiv"]==1)
   
+  # HIV positive births tracker for realized VT
+  hivbirths.momshiv[,"birthpos"][hivbirths.momshiv[,"year"]==yr]<-sum(nextbabies[,"hiv"]==1)
+  
   hivbirths.momshiv
   
 }
