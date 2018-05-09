@@ -918,7 +918,6 @@ women.empty.matrix <- function(dobs){
 #' @param yrstart (numeric) simulation start year
 #' @param yrend (numeric) simulation end year
 #' @return (matrix) empty matrix to store birth counts for each age group
-
 birth.counts.by.age.empty.matrix <- function(yrstart,yrend){
 
   # The matrix has as many rows as the length of the simulation times 7 age groups
@@ -943,6 +942,42 @@ birth.counts.by.age.empty.matrix <- function(yrstart,yrend){
   births.age.yr
 }
 
+
+#' Updates birth count by age for one year
+#' 
+#' @param births.age.yr (matrix) Matrix of birth counts by age and year, 
+#' like the one provided by `birth.counts.by.age.empty.matrix`
+#' @param nextbabies (matrix) population matrix of newborns, like the one provided by `next.babies`
+#' @param yr (integer) current year in simulation
+#' @return (matrix)
+update.birth.counts.by.age <- function(births.age.yr,nextbabies,yr){
+  
+  # Compute number of births per mother age category and store in births.age.yr
+  
+  # Ages 15-19
+  births.age.yr[,"births"][births.age.yr[,"year"]==yr & births.age.yr[,"agegrp"]==15] <-sum(nextbabies[,"momage"]<20 & nextbabies[,"momage"]>14)
+  
+  # Ages 20-24
+  births.age.yr[,"births"][births.age.yr[,"year"]==yr & births.age.yr[,"agegrp"]==20] <-sum(nextbabies[,"momage"]<25 & nextbabies[,"momage"]>19)
+  
+  # Ages 25-29
+  births.age.yr[,"births"][births.age.yr[,"year"]==yr & births.age.yr[,"agegrp"]==25] <-sum(nextbabies[,"momage"]<30 & nextbabies[,"momage"]>24)
+  
+  # Ages 30-34
+  births.age.yr[,"births"][births.age.yr[,"year"]==yr & births.age.yr[,"agegrp"]==30] <-sum(nextbabies[,"momage"]<35 & nextbabies[,"momage"]>29)
+  
+  # Ages 35-39
+  births.age.yr[,"births"][births.age.yr[,"year"]==yr & births.age.yr[,"agegrp"]==35] <-sum(nextbabies[,"momage"]<40 & nextbabies[,"momage"]>34)
+  
+  # Ages 40-44
+  births.age.yr[,"births"][births.age.yr[,"year"]==yr & births.age.yr[,"agegrp"]==40] <-sum(nextbabies[,"momage"]<45 & nextbabies[,"momage"]>39)
+  
+  # Ages 45-49
+  births.age.yr[,"births"][births.age.yr[,"year"]==yr & births.age.yr[,"agegrp"]==45] <-sum(nextbabies[,"momage"]<50 & nextbabies[,"momage"]>44)
+  
+  
+  births.age.yr
+}
 
 #' Empty matrix for birth counts by HIV status
 #' 
