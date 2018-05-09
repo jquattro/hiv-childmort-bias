@@ -949,8 +949,15 @@ birth.counts.by.age.empty.matrix <- function(yrstart,yrend){
 #' like the one provided by `birth.counts.by.age.empty.matrix`
 #' @param nextbabies (matrix) population matrix of newborns, like the one provided by `next.babies`
 #' @param yr (integer) current year in simulation
+#' @param c15 (integer) number of people in the simulation between 15 and 19 years
+#' @param c20 (integer) number of people in the simulation between 20 and 24 years
+#' @param c25 (integer) number of people in the simulation between 25 and 29 years
+#' @param c30 (integer) number of people in the simulation between 30 and 34 years
+#' @param c35 (integer) number of people in the simulation between 35 and 39 years
+#' @param c40 (integer) number of people in the simulation between 40 and 44 years
+#' @param c45 (integer) number of people in the simulation between 45 and 49 years
 #' @return (matrix) Matrix of birth counts by age and year
-update.birth.counts.by.age <- function(births.age.yr,nextbabies,yr){
+update.birth.counts.by.age <- function(births.age.yr,nextbabies,yr,c15,c20,c25,c30,c35,c40,c45){
   
   # Compute number of births per mother age category and store in births.age.yr
   
@@ -975,6 +982,16 @@ update.birth.counts.by.age <- function(births.age.yr,nextbabies,yr){
   # Ages 45-49
   births.age.yr[,"births"][births.age.yr[,"year"]==yr & births.age.yr[,"agegrp"]==45] <-sum(nextbabies[,"momage"]<50 & nextbabies[,"momage"]>44)
   
+  
+  # Update number of women per category group
+  
+  births.age.yr[,"women"][births.age.yr[,"year"]==yr & births.age.yr[,"agegrp"]==15] <-c15
+  births.age.yr[,"women"][births.age.yr[,"year"]==yr & births.age.yr[,"agegrp"]==20] <-c20
+  births.age.yr[,"women"][births.age.yr[,"year"]==yr & births.age.yr[,"agegrp"]==25] <-c25
+  births.age.yr[,"women"][births.age.yr[,"year"]==yr & births.age.yr[,"agegrp"]==30] <-c30
+  births.age.yr[,"women"][births.age.yr[,"year"]==yr & births.age.yr[,"agegrp"]==35] <-c35
+  births.age.yr[,"women"][births.age.yr[,"year"]==yr & births.age.yr[,"agegrp"]==40] <-c40
+  births.age.yr[,"women"][births.age.yr[,"year"]==yr & births.age.yr[,"agegrp"]==45] <-c45
   
   births.age.yr
 }

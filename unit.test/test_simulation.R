@@ -594,7 +594,7 @@ test_update.birth.counts.by.age_01 <- function(){
   
   yr <- 1988
   set.seed(100)
-  w <- expand.grid(hiv=c(0,1),art=c(0,1),male=c(0,1),age=0:60) %>% filter(!(hiv==0 & art==1)) %>% mutate(id=1:nrow(.),momid=NA,momage=NA,momhiv=NA,dob=yr-age,ceb=NA,cd=NA) %>% as.matrix
+  w <- expand.grid(hiv=c(0,1),art=c(0,1),male=c(0,1),age=0:60) %>% filter(!(hiv==0 & art==1)) %>% mutate(id=1:nrow(.),momid=NA,momage=NA,momhiv=NA,dob=yr-age,ceb=NA,cd=NA,death_date=NA) %>% as.matrix
   
   
   
@@ -607,11 +607,15 @@ test_update.birth.counts.by.age_01 <- function(){
   
   births.age.yr <- birth.counts.by.age.empty.matrix(min(years),max(years))
   
+  ages_dist <- count.women.age.groups(yr,w)
+  
   target <- nextbabies %>% as.data.frame() %>% mutate(agegrp=cut(momage,breaks = c(15,20,25,30,35,40,45,50),right = FALSE,labels = c("15","20","25","30","35","40","45"))) %>% count(agegrp) %>% complete(agegrp) %>% mutate(year=yr,agegrp=as.integer(as.character(agegrp)),n=ifelse(is.na(n),0,n))
   
-  target <- births.age.yr %>% as.data.frame() %>% left_join(target) %>% mutate(births=n) %>% select(-n) %>% as.matrix
+  target <- births.age.yr %>% as.data.frame() %>% left_join(target) %>% mutate(births=n) %>% select(-n)
   
-  test <- update.birth.counts.by.age(births.age.yr,nextbabies,yr)
+  target %<>% left_join(data.frame(year=yr,agegrp=as.numeric(gsub("c","",names(ages_dist))),n=ages_dist))  %>% mutate(women=n) %>% select(-n) %>% as.matrix()
+  
+  test <- update.birth.counts.by.age(births.age.yr,nextbabies,yr,ages_dist["c15"],ages_dist["c20"],ages_dist["c25"],ages_dist["c30"],ages_dist["c35"],ages_dist["c40"],ages_dist["c45"])
   
   
   checkEquals(target,test)  
