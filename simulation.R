@@ -802,7 +802,7 @@ prob.hiv.ages.years <- function(ages,years,hivinc_s,c15,c20,c25,c30,c35,c40,c45)
 }
 
 
-#' Probability of mother to child transmission
+#' Probability of mother to child transmission of HIV
 #'
 #' Probability of mother-to-child transmission of HIV was taken from Stover et al. (2008). 
 #' Transmission depends on breastfeeding duration and ART. Using estimates for single-dose nevirapine.
@@ -1200,4 +1200,28 @@ update.women.ceb <- function(w,newbaby){
   w[newbaby,"ceb"] <- w[newbaby,"ceb"]+1
   
   w
+}
+
+#' Updates a newborns matrix to account for vertical transmission of HIV
+#' 
+#' Vertical transmision is determined randomly for each baby according to each individual's probability
+#' of vertical transmission.
+#' 
+#' @param prob.vt.noart (numeric) Probability of mother to child transmission of HIV when mother is not in ART
+#' @param prob.vt.art (numeric) Probability of mother to child transmission of HIV when mother is in ART
+#' @param nextbabies (matrix) population matrix of newborns, like the one provided by `next.babies`
+#' @return (matrix) updated mopulation matrix of newborns
+vertical.transmision.HIV <- function(prob.vt.noart,prob.vt.art,nextbabies){
+  
+  # We compute two vectors: one with prov.vt.noart for individuals with HIV and not in art (and 0 otherwise)
+  # and another one with prov.vt.art for individuals in art (and 0 otherwise). When we sum both vectors we get
+  # a vector with probabilities of vertical transmision for HIV positive (and 0 por HIV negative)
+  prob.vt.thisyear.adj <- prob.vt.noart*(nextbabies[,'momhiv']-nextbabies[,'art'])+ # probability not in art
+    prob.vt.art*nextbabies[,'art'] #probability in art
+  
+  # Determine randomly if each baby gets infected
+  hivbaby <- runif(nrow(nextbabies))<prob.vt.thisyear.adj
+  nextbabies[,"hiv"] <- hivbaby
+  
+  nextbabies
 }

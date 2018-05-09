@@ -834,4 +834,53 @@ test_update.women.ceb_01 <- function(){
   checkEquals(target,test)
 }
 
-
+test_vertical.transmision.HIV_01 <- function(){
+  
+  bfeed <- 18
+  prob.vt.noart <- vert_trans(0,bfeed)
+  prob.vt.art <- vert_trans(1,bfeed)
+  
+  
+  
+  fertcountry <- "Botswana"
+  
+  worldfert <-  read.csv(file.path(base.path,"data/world_fert.csv"),head=TRUE)
+  tfr_series <-  read.csv(file.path(base.path,"data/tfr_gapminder_long.csv"),head=TRUE)
+  
+  tfr_s <-  tfr_series[tfr_series[,"country"]==fertcountry,]
+  asfr_s <- worldfert[worldfert[,"country"]==fertcountry,]
+  
+  years <- c(1946:2010)
+  ages <- c(-100:120)
+  
+  prob.birth.all <- prob.birth.ages.years(ages,years,asfr_s,tfr_s)
+  
+  arts <- c(0,1)
+  
+  
+  sexactive15 <- 0.6
+  
+  prob.birth.hiv <-  prob.birth.hiv(ages,sexactive15,arts)
+  
+  yr <- 1988
+  set.seed(100)
+  w <- expand.grid(hiv=c(0,1),art=c(0,1),male=c(0,1),age=0:60) %>% filter(!(hiv==0 & art==1)) %>% mutate(id=1:nrow(.),momid=NA,momage=NA,momhiv=NA,dob=yr-age,ceb=NA,cd=NA) %>% as.matrix
+  
+  
+  
+  newbaby <- new.babies(yr,w,prob.birth.all,prob.birth.hiv) %>% as.vector
+  
+  nextbabies <- next.babies(yr,w,newbaby)
+  
+  set.seed(200)
+  
+  target <- nextbabies %>% as.data.frame() %>% mutate(hiv=runif(nrow(.) )<case_when(art==1~prob.vt.art,momhiv==1 & art==0 ~prob.vt.noart, TRUE ~ 0)) %>% as.matrix
+  
+  set.seed(200)
+  
+  test <- vertical.transmision.HIV(prob.vt.art,prob.vt.noart,nextbabies)
+  
+  
+  checkEquals(target,test)
+  
+}
