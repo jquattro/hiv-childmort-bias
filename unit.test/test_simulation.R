@@ -889,3 +889,57 @@ test_vertical.transmision.HIV_01 <- function(){
   checkEquals(target,test)
   
 }
+
+
+test_mortality_01 <- function(){
+  
+  yr <- 1988
+  set.seed(100)
+  w <- expand.grid(hiv=c(0,1),art=c(0,1),male=c(0,1),age=15:60) %>% 
+    filter(!(hiv==0 & art==1)) %>% 
+    mutate(id=1:nrow(.),momid=NA,momage=NA,momhiv=NA,dob=yr-age,ceb=NA,cd=NA,cd4= sample(c(25,75,150,225,400),nrow(.),replace=TRUE),art_date=yr - sample(c(1:10),nrow(.),replace=TRUE),hiv_date=yr - sample(c(1:30),nrow(.),replace=TRUE),death_date=NA,hivdeath=NA) %>%
+    rowwise() %>%
+    mutate(hiv_date=max(hiv_date,dob),art_date=max(art_date,dob,hiv_date),art=ifelse(cd4<200,art,0)) %>%
+    as.matrix
+  
+  matmort = read.csv(file.path(base.path,"data/matmort.csv"),head=TRUE)
+  mort_series = read.csv(file.path(base.path,"data/IHME_female_mortSMALL.csv"),head=TRUE)
+  adultmort = read.csv(file.path(base.path,"data/MLTfemSMALL.csv"),head=TRUE)
+  
+  years <- c(1946:2010)
+  ages <- c(-100:120)
+  
+  
+  am_cntry <- "Madagascar"
+  
+  cm_cntry <- "Mali"
+  
+  
+  mort_s <- mort_series %>% filter(country==am_cntry)
+  
+  
+  u5m_edit<- read.csv(file.path(base.path,"data/u5m_edit.csv"),head=TRUE) 
+  u5m_c <- subset(u5m_edit, country==cm_cntry)
+  
+  prob.death.all <- phivneg.death.ages.years(ages,years,mort_s,adultmort,am_cntry,matmort,u5m_c)
+  
+  set.seed(200)
+  
+  art.sur <- art.surv.vec(yr,w[,"cd4"],w[,"art_date"])
+  target <- w %>% as.data.frame %>% 
+    mutate( pr.death= case_when(hiv==0 ~ prob.death.all[as.character(yr),as.character(age)],
+                                            hiv==1 & art==1 ~ art.sur,
+                                            hiv==1 & art==0 ~ aidsmort[1+yr-hiv_date],
+                                            TRUE ~ 0)) %>% 
+    mutate(died= runif(nrow(.)) < pr.death) %>%
+    mutate(death_date=case_when(died==TRUE ~ yr,
+                                TRUE ~ death_date),
+           hivdeath=case_when(died==TRUE ~ hiv,
+                              TRUE ~ as.numeric(NA))) %>% select(-died,-pr.death) %>%as.matrix
+  
+  set.seed(200)
+  test <- mortality(yr,w,prob.death.all)
+
+  checkEquals(target,test)    
+  
+}

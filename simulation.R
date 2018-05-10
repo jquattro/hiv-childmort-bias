@@ -394,6 +394,10 @@ phivneg.death.ages.years <- function(ages,years,mort_s,adultmort,am_cntry,matmor
   
 }
 
+#' Probability of death HIV positive adults not in ART. Cumulative mortality reported in Walker, Hill, and Zhao (2012)
+
+aidsmort <- c(0.01,0.02020202,0.041237113,0.053763441,0.079545455,0.098765432,0.123287671,0.15625,0.185185185,0.204545455,0.228571429,	0.296296296,0.263157895,0.357142857,0.333333333,0.333333333,0.5,0.5)
+aidsmort <- c(aidsmort,rep(1,50))
 
 #' Probability of death HIV positive adults not in ART
 #' 
@@ -405,9 +409,6 @@ phivneg.death.ages.years <- function(ages,years,mort_s,adultmort,am_cntry,matmor
 #' @return (numeric) Probability of death HIV positive adults not in ART
 phiv.death <- function(hiv_date, year){
   
-  # cumulative mortality reported in Walker, Hill, and Zhao (2012)
-  
-  aidsmort <- c(0.01,0.02020202,0.041237113,0.053763441,0.079545455,0.098765432,0.123287671,0.15625,0.185185185,0.204545455,0.228571429,	0.296296296,0.263157895,0.357142857,0.333333333,0.333333333,0.5,0.5)
   
   
   if(year<hiv_date){
@@ -1227,4 +1228,49 @@ vertical.transmision.HIV <- function(prob.vt.noart,prob.vt.art,nextbabies){
   nextbabies[,"hiv"] <- hivbaby
   
   nextbabies
+}
+
+#' Updates the matrix of population to determine randomly which individuals died during the current
+#' year of the simulation
+#' 
+#' @param yr (integer) current year in simulation
+#' @param w (matrix) population matrix
+#' @param prob.death.all (matrix) Probability of dead being HIV negative for each age and year. 
+#' As provided by `phivneg.death.ages.years`.
+#' @return (matrix) population matrix
+mortality <- function(yr,w,prob.death.all){
+  
+  # Get probability of death for this year according to age
+  
+  # HIV negative
+  prob.death.thisyear <- prob.death.all[as.character(yr),as.character(w[,"age"])]
+  
+  # HIV positive and in ART
+  prob.death.thisyear.hiv.art <- art.surv.vec(yr,w[,"cd4"],w[,"art_date"])
+  
+  # HIV positive and not in ART. aidsmort is defined as a constant next to `phiv.death`
+  prob.death.thisyear.hiv.noart <- aidsmort[1+yr-w[,"hiv_date"]]
+  
+  # Missing value of probability means 0 probability
+  prob.death.thisyear.hiv.art[is.na(prob.death.thisyear.hiv.art)] <- 0
+  prob.death.thisyear.hiv.noart[is.na(prob.death.thisyear.hiv.noart)] <- 0
+  
+  # Combine the three vectors above to get the probability for each inidividual
+  prob.death.thisyear.adj <- prob.death.thisyear*(1-w[,"hiv"]) + # HIV negative
+    prob.death.thisyear.hiv.art*w[,'art'] + # HIV positive and in ART
+    prob.death.thisyear.hiv.noart*(1-w[,'art'])*w[,'hiv'] # HIV positive and not in ART
+
+  # Determine randomly who died this year...
+  died <- runif(nrow(w))<prob.death.thisyear.adj
+  
+  # ... and was not dead already
+  diedthisyear <- died & is.na(w[,"death_date"])
+  
+  # Date of death
+  w[diedthisyear,"death_date"] = yr
+  
+  # Who died being HIV positive?
+  w[diedthisyear,"hivdeath"] = w[diedthisyear,"hiv"]
+  
+  w
 }
