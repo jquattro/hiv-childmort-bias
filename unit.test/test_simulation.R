@@ -943,3 +943,71 @@ test_mortality_01 <- function(){
   checkEquals(target,test)    
   
 }
+
+
+test_HIV.infection_01 <- function(){
+  
+  yr <- 1988
+  set.seed(100)
+  w <- bind_rows(expand.grid(hiv=c(0,1),art=c(0,1),male=c(0,1),age=15:60),
+                 expand.grid(hiv=c(0,1),art=c(0,1),male=c(0,1),age=15:60),
+                 expand.grid(hiv=c(0,1),art=c(0,1),male=c(0,1),age=15:60),
+                 expand.grid(hiv=c(0,1),art=c(0,1),male=c(0,1),age=15:60),
+                 expand.grid(hiv=c(0,1),art=c(0,1),male=c(0,1),age=15:60)) %>% 
+    filter(!(hiv==0 & art==1)) %>% 
+    mutate(id=1:nrow(.),
+           dob=yr-age,
+           cd4= case_when(hiv==1 ~ sample(c(25,75,150,225,400),nrow(.),replace=TRUE), TRUE ~ as.numeric(NA)),
+           cd4dec=case_when(hiv==1 ~ rnorm(nrow(.),2,1), TRUE ~ as.numeric(NA)),
+           art_date=case_when(hiv==1 & art==1 ~ yr - sample(c(1:10),nrow(.),replace=TRUE), TRUE ~ as.numeric(NA)),
+           hiv_date=case_when(hiv==1 ~ yr - sample(c(1:30),nrow(.),replace=TRUE), TRUE ~ as.numeric(NA)),
+           death_date=NA,
+           hivdeath=NA,
+           death_date=yr*sample(c(1,NA),nrow(.),replace=TRUE,prob = c(0.1,0.9))) %>%
+    rowwise() %>%
+    mutate(hiv_date=max(hiv_date,dob),art_date=max(art_date,dob,hiv_date),art=ifelse(cd4<200,art,0)) %>%
+    as.matrix
+  
+  years <- c(1946:2010)
+  ages <- c(-100:120)
+  
+  hivhogan = read.csv(file.path(base.path,"data/inc_curves.csv"),head=TRUE)
+  
+  curve= "BotswanaUrban"
+  hivinc_s = hivhogan[hivhogan$Country==curve,]  
+  
+  ages_dist <- count.women.age.groups(yr,w)
+  
+  prob.hiv.vec <- prob.hiv.ages.years(ages,years,hivinc_s,ages_dist["c15"],ages_dist["c20"],ages_dist["c25"],ages_dist["c30"],ages_dist["c35"],ages_dist["c40"],ages_dist["c45"])
+
+  
+  set.seed(500)
+  
+  random_gothiv <- runif(nrow(w))
+
+  newlyinfected <- w %>% as.data.frame() %>% mutate(newlyinfected=(random_gothiv < case_when(hiv==1 ~ 0,
+                                                       hiv==0 ~ prob.hiv.vec[as.character(age),as.character(yr)])) & !(!is.na(death_date) & death_date == yr)) %>% pull("newlyinfected")
+  random_cd4 <- w[,"cd4"]
+  random_cd4[newlyinfected] <- rnorm(length(which(newlyinfected)),25.91,.61)^2
+  
+  cd4decl35 <- rnorm(nrow(w),1.32,1)
+  cd4decg35 <- rnorm(nrow(w),2,1)
+  
+  target <- w %>% as.data.frame() %>% mutate(hiv=case_when(hiv==0 & newlyinfected ~ 1, TRUE ~ hiv)) %>%
+                                      mutate(
+                                             hiv_date=case_when(hiv==1 & newlyinfected ~ yr, TRUE ~ hiv_date),
+                                             cd4=case_when(hiv==1 & newlyinfected ~ random_cd4, TRUE ~ cd4),
+                                             cd4dec=case_when(newlyinfected & age < 35 ~ cd4decl35,
+                                                              newlyinfected & age >= 35 ~ cd4decg35,
+                                                              TRUE ~ cd4dec)) %>%
+    mutate(cd4=case_when(!newlyinfected & hiv==1 ~ cd4.prog(cd4,cd4dec,hiv_date,yr),
+                         TRUE ~ cd4)) %>% as.matrix
+  
+  set.seed(500)
+  
+  test <- HIV.infection(yr,w,prob.hiv.vec)
+  
+  
+  checkEquals(target,test)
+    
+}

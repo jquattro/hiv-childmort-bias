@@ -1274,3 +1274,65 @@ mortality <- function(yr,w,prob.death.all){
   
   w
 }
+
+#' Updates the matrix of population to determine randomly which individuals got infected during the current
+#' year of the simulation. Also determines initial CD4 count and CD4 decline. Updates CD4 count in 
+#' people infected in previous years.
+#' 
+#' When an individual is infected with HIV, the square root of her initial CD4 count is 
+#' a random draw from a normal distribution with a mean of 25.9 and a standard deviation of 0.61.
+#' For each woman under age 35 the absolute yearly decline in CD4 is defined by a random draw 
+#' from a normal distribution with a mean of 1.32, and a standard deviation of 1. For women 35 
+#' years or older the draw comes from a normal distribution with a mean of 2.0 and a 
+#' standard deviation of 1.
+#' 
+#' @param yr (integer) current year in simulation
+#' @param w (matrix) population matrix
+#' @param prob.hiv.vec (matrix) Probability of getting infected for each age and year. 
+#' As provided by `prob.hiv.ages.years`.
+#' @return (matrix) population matrix
+HIV.infection <- function(yr,w,prob.hiv.vec){
+  
+  # Probability of getting infected this year for each age category. 0 if already infected
+  prob.hiv.thisyear <- prob.hiv.vec[as.character(w[,"age"]),as.character(yr)]*(1-w[,"hiv"])
+  
+  # Determine randomly who gets infected.
+  gothiv <- runif(nrow(w))<prob.hiv.thisyear
+  
+  # Remove those who died this year
+  diedthisyear <- !is.na(w[,"death_date"]) & w[,"death_date"] == yr
+  newlyinfected <- gothiv & !diedthisyear
+  
+  
+  
+  # Assign infection and year of infection.
+  
+  w[newlyinfected,"hiv"]=TRUE
+  w[newlyinfected,"hiv_date"]=yr
+  
+  # When an individual is infected with HIV, the square root of her initial CD4 count is 
+  # a random draw from a normal distribution with a mean of 25.9 and a standard deviation of 0.61.
+  
+  w[newlyinfected,"cd4"] = rnorm(length(which(newlyinfected)),25.91,.61)^2
+  
+  # For each woman under age 35 the absolute yearly decline in CD4 is defined by a random draw 
+  # from a normal distribution with a mean of 1.32, and a standard deviation of 1. For women 35 
+  # years or older the draw comes from a normal distribution with a mean of 2.0 and a 
+  # standard deviation of 1.
+  
+  cd4decl35 <- rnorm(nrow(w),1.32,1)
+  cd4decg35 <- rnorm(nrow(w),2,1)
+  
+  # Assign CD4 decline
+  
+  w[newlyinfected & w[,'age']<35,'cd4dec'] = cd4decl35[newlyinfected & w[,'age']<35]
+  w[newlyinfected & w[,'age']>=35,'cd4dec'] = cd4decg35[newlyinfected & w[,'age']>=35]
+  
+  # Update CD4 in people infected in previous years.
+  
+  oldinfected <- w[,"hiv"] & !newlyinfected
+  w[oldinfected,"cd4"] <- cd4.prog(w[oldinfected,"cd4"],w[oldinfected,"cd4dec"], w[oldinfected,"hiv_date"],yr)
+  
+  w
+}
+
