@@ -1011,3 +1011,57 @@ test_HIV.infection_01 <- function(){
   checkEquals(target,test)
     
 }
+
+test_ART.initiation_01 <- function(){
+  
+  
+  yr <- 2006
+  set.seed(100)
+  w <- bind_rows(expand.grid(hiv=c(0,1),art=c(0,1),male=c(0,1),age=15:60),
+                 expand.grid(hiv=c(0,1),art=c(0,1),male=c(0,1),age=15:60),
+                 expand.grid(hiv=c(0,1),art=c(0,1),male=c(0,1),age=15:60),
+                 expand.grid(hiv=c(0,1),art=c(0,1),male=c(0,1),age=15:60),
+                 expand.grid(hiv=c(0,1),art=c(0,1),male=c(0,1),age=15:60)) %>% 
+    filter(!(hiv==0 & art==1)) %>% 
+    mutate(id=1:nrow(.),
+           dob=yr-age,
+           cd4= case_when(hiv==1 ~ sample(c(25,75,150,225,400),nrow(.),replace=TRUE), TRUE ~ as.numeric(NA)),
+           cd4dec=case_when(hiv==1 ~ rnorm(nrow(.),2,1), TRUE ~ as.numeric(NA)),
+           art_date=case_when(hiv==1 & art==1 ~ yr - sample(c(1:10),nrow(.),replace=TRUE), TRUE ~ as.numeric(NA)),
+           hiv_date=case_when(hiv==1 ~ yr - sample(c(1:30),nrow(.),replace=TRUE), TRUE ~ as.numeric(NA)),
+           death_date=NA,
+           hivdeath=NA,
+           art_e=NA,
+           death_date=yr*sample(c(1,NA),nrow(.),replace=TRUE,prob = c(0.1,0.9))) %>%
+    rowwise() %>%
+    mutate(hiv_date=max(hiv_date,dob),art_date=max(art_date,dob,hiv_date),art=ifelse(cd4<200,art,0)) %>%
+    as.matrix
+  
+  art_series= read.csv("data/sampleART.csv",head=TRUE)
+  
+  art_col=c("Botswana")
+  
+  artprobs=cbind(art_series[,"yr"],art_series[,art_col])
+
+  colnames(artprobs) = c("yr","artinc")
+  
+  threshold = 200
+
+  
+  set.seed(300)
+  
+  newlyart <- runif(nrow(w)) < artprobs[artprobs[,"yr"]==yr,2]
+  
+  target <- w %>% as.data.frame() %>% mutate(art_e=case_when(is.na(art_e) & hiv==1 & cd4 < threshold ~ yr,
+                                                             TRUE ~ as.numeric(NA))) %>%
+    mutate(couldgetart = !is.na(art_e) & !art) %>%
+    mutate(art=case_when(couldgetart & newlyart ~ 1, TRUE ~ art),art_date=case_when(couldgetart & newlyart ~ yr, TRUE ~ art_date)) %>% select(-couldgetart) %>%
+    as.matrix
+    
+  set.seed(300)
+  
+  test <- ART.initiation(yr,w,artprobs,threshold)
+  
+  checkEquals(target,test)
+    
+}

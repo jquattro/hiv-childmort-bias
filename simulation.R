@@ -1336,3 +1336,33 @@ HIV.infection <- function(yr,w,prob.hiv.vec){
   w
 }
 
+#' Updates the matrix of population to determine randomly which individuals started ART during the current
+#' year of the simulation.
+#' 
+#' 
+#' 
+#' @param yr (integer) current year in simulation
+#' @param w (matrix) population matrix
+#' @param artprobs (matrix)  Annual probabilities for initiating ART given that a woman’s CD4 was below threshold, 
+#' for 2004 to 2010. Probability is 0 before 2004.
+#' @param threshold (numeric) CD4 threshold. Bellow this value one person could start ART.
+#' @return (matrix) population matrix
+ART.initiation <- function(yr,w,artprobs,threshold){
+  
+  # Which individuals are not in ART
+  
+  noart = is.na(w[,"art_e"]) & w[,"hiv"]
+  
+  # Which individuals not inr ART, are below the threshold, and could start ART
+  w[noart,"art_e"] = ifelse(w[noart,"cd4"]<threshold,yr,NA)
+  couldgetart = !is.na(w[,"art_e"]) & !w[,"art"]
+  
+  # Determine randomly which individuals start ART
+  newlyart = runif(nrow(w))<artprobs[artprobs[,"yr"]==yr,2]
+  
+  # Update the matrix
+  w[couldgetart & newlyart,"art"] = TRUE # New people in ART
+  w[couldgetart & newlyart,"art_date"] = yr # Year ART was started
+  
+  w
+}
