@@ -1065,3 +1065,208 @@ test_ART.initiation_01 <- function(){
   checkEquals(target,test)
     
 }
+
+
+test_w.loop.pass_01 <- function(){
+  
+  
+  yr <- 2006
+  set.seed(100)
+  w <- bind_rows(expand.grid(hiv=c(0,1),art=c(0,1),male=c(0,1),age=15:60),
+                 expand.grid(hiv=c(0,1),art=c(0,1),male=c(0,1),age=15:60),
+                 expand.grid(hiv=c(0,1),art=c(0,1),male=c(0,1),age=15:60),
+                 expand.grid(hiv=c(0,1),art=c(0,1),male=c(0,1),age=15:60),
+                 expand.grid(hiv=c(0,1),art=c(0,1),male=c(0,1),age=15:60)) %>% 
+    filter(!(hiv==0 & art==1)) %>% 
+    mutate(id=1:nrow(.),
+           dob=yr-age,
+           cd4= case_when(hiv==1 ~ sample(c(25,75,150,225,400),nrow(.),replace=TRUE), TRUE ~ 0),
+           cd4dec=case_when(hiv==1 ~ rnorm(nrow(.),2,1), TRUE ~ as.numeric(NA)),
+           art_date=case_when(hiv==1 & art==1 ~ yr - sample(c(1:10),nrow(.),replace=TRUE), TRUE ~ as.numeric(NA)),
+           hiv_date=case_when(hiv==1 ~ yr - sample(c(1:30),nrow(.),replace=TRUE), TRUE ~ as.numeric(NA)),
+           death_date=NA,
+           hivdeath=NA,
+           art_e=NA,
+           momid=NA,
+           momage=NA,
+           momhiv=NA,
+           ceb=0,
+           cd=0,
+           death_date=yr*sample(c(1,NA),nrow(.),replace=TRUE,prob = c(0.1,0.9))) %>%
+    rowwise() %>%
+    mutate(hiv_date=max(hiv_date,dob),art_date=max(art_date,dob,hiv_date),art=ifelse(cd4<200,art,0)) %>%
+    as.matrix
+  
+  # ART initiation
+  
+  art_series= read.csv("data/sampleART.csv",head=TRUE)
+  
+  art_col=c("Botswana")
+  
+  artprobs=cbind(art_series[,"yr"],art_series[,art_col])
+  
+  colnames(artprobs) = c("yr","artinc")
+  
+  threshold = 200
+  
+  
+  # HIV infection
+  
+  years <- c(1946:2010)
+  ages <- c(-100:120)
+  
+  hivhogan = read.csv(file.path(base.path,"data/inc_curves.csv"),head=TRUE)
+  
+  curve= "BotswanaUrban"
+  hivinc_s = hivhogan[hivhogan$Country==curve,]  
+  
+  # Mortality
+  
+  matmort = read.csv(file.path(base.path,"data/matmort.csv"),head=TRUE)
+  mort_series = read.csv(file.path(base.path,"data/IHME_female_mortSMALL.csv"),head=TRUE)
+  adultmort = read.csv(file.path(base.path,"data/MLTfemSMALL.csv"),head=TRUE)
+  
+  years <- c(1946:2010)
+  ages <- c(-100:120)
+  
+  
+  am_cntry <- "Madagascar"
+  
+  cm_cntry <- "Mali"
+  
+  
+  mort_s <- mort_series %>% filter(country==am_cntry)
+  
+  
+  u5m_edit<- read.csv(file.path(base.path,"data/u5m_edit.csv"),head=TRUE) 
+  u5m_c <- subset(u5m_edit, country==cm_cntry)
+  
+  prob.death.all <- phivneg.death.ages.years(ages,years,mort_s,adultmort,am_cntry,matmort,u5m_c)
+  
+  
+  # Vertical trasmission HIV
+  
+  bfeed <- 18
+  prob.vt.noart <- vert_trans(0,bfeed)
+  prob.vt.art <- vert_trans(1,bfeed)
+  
+  # Fertility
+  
+  fertcountry <- "Botswana"
+  
+  worldfert <-  read.csv(file.path(base.path,"data/world_fert.csv"),head=TRUE)
+  tfr_series <-  read.csv(file.path(base.path,"data/tfr_gapminder_long.csv"),head=TRUE)
+  
+  tfr_s <-  tfr_series[tfr_series[,"country"]==fertcountry,]
+  asfr_s <- worldfert[worldfert[,"country"]==fertcountry,]
+  
+  
+  prob.birth.all <- prob.birth.ages.years(ages,years,asfr_s,tfr_s)
+  
+  arts <- c(0,1)
+  
+  
+  sexactive15 <- 0.6
+  
+  prob.birth.hiv <-  prob.birth.hiv(ages,sexactive15,arts)
+  
+  births.age.yr <- birth.counts.by.age.empty.matrix(min(years),max(years))
+  
+  hivbirths.momshiv <- birth.counts.by.hiv.status.empty.matrix(min(years),max(years))
+  
+  set.seed(300)
+  test <- w.loop.pass(yr,w,ages,years,hivinc_s,prob.birth.all,prob.birth.hiv,births.age.yr,hivbirths.momshiv,prob.vt.noart,prob.vt.art,prob.death.all,artprobs,threshold)
+  
+  
+}
+
+test_run.simulation_01 <- function(){
+  # ART initiation
+  
+  art_series= read.csv("data/sampleART.csv",head=TRUE)
+  
+  art_col=c("Botswana")
+  
+  artprobs=cbind(art_series[,"yr"],art_series[,art_col])
+  
+  colnames(artprobs) = c("yr","artinc")
+  
+  threshold = 200
+  
+  
+  # HIV infection
+  
+  years <- c(1946:2010)
+  ages <- c(-100:120)
+  
+  hivhogan = read.csv(file.path(base.path,"data/inc_curves.csv"),head=TRUE)
+  
+  curve= "BotswanaUrban"
+  hivinc_s = hivhogan[hivhogan$Country==curve,]  
+  
+  # Mortality
+  
+  matmort = read.csv(file.path(base.path,"data/matmort.csv"),head=TRUE)
+  mort_series = read.csv(file.path(base.path,"data/IHME_female_mortSMALL.csv"),head=TRUE)
+  adultmort = read.csv(file.path(base.path,"data/MLTfemSMALL.csv"),head=TRUE)
+  
+  years <- c(1946:2010)
+  ages <- c(-100:120)
+  
+  
+  am_cntry <- "Madagascar"
+  
+  cm_cntry <- "Mali"
+  
+  
+  mort_s <- mort_series %>% filter(country==am_cntry)
+  
+  
+  u5m_edit<- read.csv(file.path(base.path,"data/u5m_edit.csv"),head=TRUE) 
+  u5m_c <- subset(u5m_edit, country==cm_cntry)
+  
+  
+  # Vertical trasmission HIV
+  
+  bfeed <- 18
+  
+  # Fertility
+  
+  fertcountry <- "Botswana"
+  
+  worldfert <-  read.csv(file.path(base.path,"data/world_fert.csv"),head=TRUE)
+  tfr_series <-  read.csv(file.path(base.path,"data/tfr_gapminder_long.csv"),head=TRUE)
+  
+  tfr_s <-  tfr_series[tfr_series[,"country"]==fertcountry,]
+  asfr_s <- worldfert[worldfert[,"country"]==fertcountry,]
+  
+  
+  arts <- c(0,1)
+  
+  
+  sexactive15 <- 0.6
+  
+  yrstart <- 1981
+  
+  yrend <- 1985
+  
+  growth=0.03
+  
+  initialpop=100
+  
+  
+  
+  source(file.path(base.path,"unit.test/original_functions.R"))
+  
+  set.seed(300)
+  
+  target <- original.simulation(yrstart,yrend,ages,years,asfr_s,tfr_s,sexactive15,arts,mort_s,adultmort,am_cntry,matmort,u5m_c,bfeed,growth,initialpop,hivinc_s,artprobs,threshold)
+  
+  set.seed(300)
+  
+  
+  test <- run.simulation(yrstart,yrend,ages,years,asfr_s,tfr_s,sexactive15,arts,mort_s,adultmort,am_cntry,matmort,u5m_c,bfeed,growth,initialpop,hivinc_s,artprobs,threshold)
+  
+  checkEquals(target,test)
+  
+}

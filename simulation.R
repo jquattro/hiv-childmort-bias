@@ -1366,3 +1366,161 @@ ART.initiation <- function(yr,w,artprobs,threshold){
   
   w
 }
+
+
+#' Runs one year of simulation
+#' 
+#' 
+#' @param yr (integer) current year in simulation
+#' @param w (matrix) matrix of population
+#' @param ages (numeric) vector of ages
+#' @param years (numeric) vector of years in simulation
+#' @param hivinc_s (data.frame) HIV incidence curve estimated by Hogan and Salomon (2012) for a specific country
+#' @param prob.birth.all (matrix) Annual probability of birth as a function of calendar 
+#' year and mother’s age. HIV negative. As given by `prob.birth.ages.years`.
+#' @param prob.birth.hiv (matrix) Reduction in prob of giving birth due to HIV for each art, age combination. As provided by `prob.birth.hiv`
+#' @param births.age.yr (matrix) Matrix of birth counts by age and year, 
+#' like the one provided by `birth.counts.by.age.empty.matrix`
+#' @param hivbirths.momshiv (matrix) Matrix of birth counts by HIV status and year, 
+#' like the one provided by `birth.counts.by.hiv.status.empty.matrix`
+#' @param prob.vt.noart (numeric) Probability of mother to child transmission of HIV when mother is not in ART
+#' @param prob.vt.art (numeric) Probability of mother to child transmission of HIV when mother is in ART
+#' @param prob.death.all (matrix) Probability of dead being HIV negative for each age and year. 
+#' As provided by `phivneg.death.ages.years`.
+#' @param artprobs (matrix)  Annual probabilities for initiating ART given that a woman’s CD4 was below threshold, 
+#' for 2004 to 2010. Probability is 0 before 2004.
+#' @param threshold (numeric) CD4 threshold. Bellow this value one person could start ART.
+#' @return (list) with elements: w, births.age.yr, hivbirths.momshiv updated.
+w.loop.pass <- function(yr,w,ages,years,hivinc_s,prob.birth.all,prob.birth.hiv,births.age.yr,hivbirths.momshiv,prob.vt.noart,prob.vt.art,prob.death.all,artprobs,threshold){
+  
+    # count women by age group to normalize hiv incidence
+    counts <- count.women.age.groups(yr,w)
+    
+    # Update vector of HIV incidence rates
+    prob.hiv.vec <- prob.hiv.ages.years(ages,years,hivinc_s,counts["c15"],counts["c20"],counts["c25"],counts["c30"],counts["c35"],counts["c40"],counts["c45"])
+    
+    w <- update.women.age(yr,w)
+    
+    # Fertility  
+    
+    newbaby <- new.babies(yr,w,prob.birth.all,prob.birth.hiv)
+    
+    nextbabies <- next.babies(yr,w,newbaby)
+    
+    w <- update.women.ceb(w,newbaby)
+    
+    # births by age group for tfr
+    # women by age group for tfr
+    
+    births.age.yr <- update.birth.counts.by.age(births.age.yr,nextbabies,yr,counts["c15"],counts["c20"],counts["c25"],counts["c30"],counts["c35"],counts["c40"],counts["c45"])
+    
+    # Vertical transmission of HIV
+    nextbabies <- vertical.transmision.HIV(prob.vt.noart,prob.vt.art,nextbabies)
+    
+    
+    # births to HIV positive women
+    # HIV positive births tracker for realized VT
+    hivbirths.momshiv <- update.birth.counts.by.hiv.status(hivbirths.momshiv,nextbabies,yr)
+    
+    w <- rbind(w,nextbabies)
+    
+    # Mortality
+    
+    w<- mortality(yr,w,prob.death.all)
+    
+    # HIV infection
+    
+    w <- HIV.infection(yr,w,prob.hiv.vec)
+      
+      
+    # ART intiation
+    w <- ART.initiation(yr,w,artprobs,threshold)
+    
+    list(w=w,births.age.yr=births.age.yr,hivbirths.momshiv=hivbirths.momshiv)
+  
+}
+
+#' Computes general probabilities,
+#' @param ages (numeric) vector of ages
+#' @param years (numeric) vector of years in simulation
+#' @param asfr_s (data.frame) estimates of age-specific fertility rates (ASFR) 
+#' from the United Nations Population Division's World Fertility Data (2013) 
+#' @param tfr_s (data.frame) Interpolated estimates of the total fertility rate (TFR) 
+#' from the United Nations Population Division’s World Population Prospects (2012)
+#' @param sexactive15 (numeric) percent of females aged 15-19 who are sexually active
+#' @param art (integer) vector of values that should be either: 0 (not on ART) or 1 (on ART)
+#' @param mort_s (data.frame) mortality series for the model country, must contain columns year and q45_15 
+#' from the Institute for Health Metrics and Evaluation.
+#' @param adultmort (data.frame) UN model life table (UN Population Division). models mortality for each 45q15
+#' @param matmort (data.frame) Maternal mortality
+#' @param am_cntry (character) model country for adult mortality
+#' @param u5m_c (data.frame) child mortatily UN Inter-agency Group for Child Mortality 
+#' Estimation (UN IGME) (2012) for one country.
+#' @param bfeed (integer) breastfeeding duration (months) in the general population (must be 6, 12 or 18)
+#' @param growth (numeric) yearly population growth rate
+#' @param initialpop (integer) initial population
+#' @param hivinc_s (data.frame) HIV incidence curve estimated by Hogan and Salomon (2012) for a specific country
+#' @param artprobs (matrix)  Annual probabilities for initiating ART given that a woman’s CD4 was below threshold, 
+#' for 2004 to 2010. Probability is 0 before 2004.
+#' @param threshold (numeric) CD4 threshold. Bellow this value one person could start ART.
+#' @return (list) simulation result with elements: w (population matrix), births.age.yr (Matrix of birth counts by age and year), hivbirths.momshiv updated (Matrix of birth counts by HIV status and year).
+run.simulation <- function(yrstart,yrend,ages,years,asfr_s,tfr_s,sexactive15,arts,mort_s,adultmort,am_cntry,matmort,u5m_c,bfeed,growth,initialpop,hivinc_s,artprobs,threshold){
+  
+  # Annual probability of birth as a function of calendar year and mother’s age.
+  # HIV negative
+  
+  prob.birth.all <- prob.birth.ages.years(ages,years,asfr_s,tfr_s)
+  
+  # Reduction in prob of giving birth due to HIV for each art, age combination
+  
+  prob.birth.hiv <- prob.birth.hiv(ages,sexactive15,arts)
+  
+  # Annual probability of death, HIV negative women for each age year combination
+  
+  prob.death.all <- phivneg.death.ages.years(ages,years,mort_s,adultmort,am_cntry,matmort,u5m_c)
+  
+  # Probability of mother to child transmission of HIV. Mother not in ART
+  
+  prob.vt.noart <- vert_trans(0,bfeed)
+  
+  # Probability of mother to child transmission of HIV. Mother in ART
+  
+  prob.vt.art <- vert_trans(1,bfeed)
+  
+  # Date of birth for initial population
+  
+  dobs <- initial.DOBs(growth,initialpop)
+  
+  # Empty population matrix
+  
+  w <- women.empty.matrix(dobs)
+  
+  # Empty matrix of birth counts by age and year
+  
+  births.age.yr <- birth.counts.by.age.empty.matrix(yrstart,yrend)
+  
+  # Empty matrix of birth counts by HIV status and year
+  
+  hivbirths.momshiv <- birth.counts.by.hiv.status.empty.matrix(yrstart,yrend)
+  
+  # Run simulation
+  
+  for (yr in yrstart:yrend) {
+   
+    # Run simulation pass
+    result <- w.loop.pass(yr,w,ages,years,hivinc_s,prob.birth.all,prob.birth.hiv,births.age.yr,hivbirths.momshiv,prob.vt.noart,prob.vt.art,prob.death.all,artprobs,threshold)
+     
+    # Extract results
+    
+    w <- result$w
+    
+    births.age.yr <- result$births.age.yr
+    
+    hivbirths.momshiv <- result$hivbirths.momshiv
+    
+  }
+  
+  
+  list(w=w,births.age.yr=births.age.yr,hivbirths.momshiv=hivbirths.momshiv)
+  
+}
