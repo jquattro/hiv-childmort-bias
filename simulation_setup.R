@@ -1650,58 +1650,11 @@ realized.vert_trans <- function(hivbirths.momshiv,start_year,end_year){
 ##### RUN SIMULATION #####
 
 
-hivhogan = read.csv("./data/inc_curves.csv",head=TRUE)
-mort_series = read.csv("./data/IHME_female_mortSMALL.csv",head=TRUE)
-adultmort = read.csv("./data/MLTfemSMALL.csv",head=TRUE)
-worldfert= read.csv("./data/world_fert.csv",head=TRUE)
-tfr_series= read.csv("./data/tfr_gapminder_long.csv",head=TRUE)
-art_series= read.csv("./data/sampleART.csv",head=TRUE)
-u5m_edit= read.csv("./data/u5m_edit.csv",head=TRUE)
-matmort = read.csv("./data/matmort.csv",head=TRUE)
 
-
-# CREATE PARAMETER SETS
-fertcountry=c("Botswana","Uganda")
-cm_cntry = c("Mali","Morocco")
-am_cntry = c("Madagascar","Sudan")
-sexactive15 = c(30,70)
-mmr0 = c(0.0012,0.012)
-mmr_dec = c(0,0.073) # annual percent decline in MMR
-curve= c("BotswanaUrban","LesothoRural","MalawiRural","UgandaRural","CamerounRural","zero","BotUrb2x")
-bfeed = c(6,18)
-art_col=c("zero","Botswana","Cameroon","Malawi","Bot_dub")
-growth= c(0.01,0.02)
-yrend=2010
-
-# expand.grid() will create dataset with unique combinations in each row
-
-inputs <- expand.grid(fertcountry, cm_cntry, am_cntry, sexactive15,mmr0,mmr_dec,curve,bfeed,art_col,growth,yrend)
-names(inputs) = c("fertcountry", "cm_cntry","am_cntry","sexactive15","mmr0","mmr_dec","curve","bfeed","art_col","growth","yrend")
-
-# Add HIV-free populations to hivhogan
-hivhogan$Country <- factor(hivhogan$Country,levels=c(levels(hivhogan$Country),"zero"))
-hivhogan[63,1] = "zero"
-hivhogan[63,c(2:47)]=0
-
-
-bigsim <- function(inp,initialpop){
+bigsim <- function(inp,initialpop,years,ages){
   
-  # CD4 threshold
   
-  threshold = 200
-  
-  # Starting year
-  yrstart = 1946
-  
-  # Population growth
-  growth <- 0.03
-  
-  years <- c(1946:2010)
-  ages <- c(-100:120)
-  
-  arts <- c(0,1)
-  
-  # bigsim parses out the set of inputs
+  # Parse out the set of inputs
   fertcountry= toString(inp$fertcountry)
   cm_cntry = toString(inp$cm_cntry)
   am_cntry = toString(inp$am_cntry)
@@ -1711,7 +1664,10 @@ bigsim <- function(inp,initialpop){
   curve= toString(inp$curve)
   bfeed = inp$bfeed
   art_col = toString(inp$art_col)
+  growth=inp$growth
   yrend=inp$yrend
+  yrstart=inp$yrstart
+  threshold=inp$threshold
   
   # bigsim TAKES SUBSETS OF DATASETS
   tfr_s = tfr_series[tfr_series[,"country"]==fertcountry,]
@@ -1725,6 +1681,8 @@ bigsim <- function(inp,initialpop){
   # Run simulation
   
   ptm <- proc.time()
+  
+  arts <- c(0,1)
   
   simulation.result <- run.simulation(yrstart,yrend,ages,years,asfr_s,tfr_s,sexactive15,arts,mort_s,adultmort,am_cntry,matmort,u5m_c,bfeed,growth,initialpop,hivinc_s,artprobs,threshold)
   
