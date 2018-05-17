@@ -413,7 +413,7 @@ phiv.death <- function(hiv_date, year){
   
   if(year<hiv_date){
     return("error: year<hiv_date")
-    }
+  }
   
   duration <- year - hiv_date
   
@@ -634,11 +634,11 @@ baby.death.nohiv <- function(ages,years,u5m_c){
 #' @param ages (integer) vector of children ages
 #' @return (numeric) Probability of death for HIV positive children
 baby.death.hiv <- function(ages){
-
+  
   # cumulative child mortality due to AIDS from Walker, Hill, and Zhao (2012)
   
   hivchild_mort = c(0.376,  0.2019,	0.1184,	0.07061,	0.0588,	0.0234375)  
-
+  
   # Empty vector
   
   baby.death.hiv <- vector(,length(ages) )
@@ -657,7 +657,7 @@ baby.death.hiv <- function(ages){
   }
   
   baby.death.hiv
-    
+  
 }
 
 
@@ -860,7 +860,7 @@ cd4.prog <- function(cd4,cd4dec, hivdate,year){
 #' @param initialpop (integer) initial population
 #' @return (numeric) date of birth
 initial.DOBs <- function(growth,initialpop){
-
+  
   # Compute total population for each step
   
   ratios <- rep(1,50)
@@ -892,7 +892,7 @@ initial.DOBs <- function(growth,initialpop){
 #' @param dobs (numeric) vector of years of birth
 #' @returm (matrix) empty population matrix with women only
 women.empty.matrix <- function(dobs){
-
+  
   w <- matrix(NA,length(dobs),19)
   colnames(w) <- c("id", "momid","dob","age","ceb", "hiv","hiv_date","death_date","hivdeath","cd4","cd4dec","art","art_date","art_e","momage","momhiv","male","cd","dead")
   w[,1] <- c(1:length(dobs))
@@ -910,7 +910,7 @@ women.empty.matrix <- function(dobs){
   w[,"dead"]=0
   
   w
-    
+  
 }
 
 
@@ -920,12 +920,12 @@ women.empty.matrix <- function(dobs){
 #' @param yrend (numeric) simulation end year
 #' @return (matrix) empty matrix to store birth counts for each age group
 birth.counts.by.age.empty.matrix <- function(yrstart,yrend){
-
+  
   # The matrix has as many rows as the length of the simulation times 7 age groups
   
   births.age.yr <- matrix(NA, (yrend-yrstart+1)*7,4)
   colnames(births.age.yr) <- c("year","agegrp","births","women")
-
+  
   # Fill years
   
   b<-vector()
@@ -1003,7 +1003,7 @@ update.birth.counts.by.age <- function(births.age.yr,nextbabies,yr,c15,c20,c25,c
 #' @param yrend (numeric) simulation end year
 #' @return (matrix) empty matrix to store birth counts for each HIV status
 birth.counts.by.hiv.status.empty.matrix <- function(yrstart,yrend){
-
+  
   # The matrix has as one row per year
   
   hivbirths.momshiv <- matrix(NA, (yrend-yrstart+1),3)
@@ -1016,7 +1016,7 @@ birth.counts.by.hiv.status.empty.matrix <- function(yrstart,yrend){
   
   
   hivbirths.momshiv
-    
+  
 }
 
 #' Updates birth count by HIV status for one year
@@ -1092,7 +1092,7 @@ count.women.age.groups <- function(yr,w){
   x = is.na(w[,"death_date"]) & yr-w[,"dob"]<50 & yr-w[,"dob"]>44
   x1 = !is.na(w[,"death_date"]) & yr-w[,"dob"]<50 & yr-w[,"dob"]>44 & yr<w[,"death_date"] 
   c45 =   sum(x==T) + sum(x1==T)
-
+  
   # Return vector with counts
   
   c(c15=c15,c20=c20,c25=c25,c30=c30,c35=c35,c40=c40,c45=c45)
@@ -1166,7 +1166,7 @@ new.babies <- function(yr,w,prob.birth.all,prob.birth.hiv){
 #' that year (TRUE) or not (FALSE). As computed by `new.babies`
 #' @return (matrix) Population matrix
 next.babies <- function(yr,w,newbaby){
-
+  
   # Empty matrix with the same columns as w and as many rows as newborns
   nextbabies <- matrix(NA,length(which(newbaby)),length(w[1,]))
   colnames(nextbabies) <- colnames(w)
@@ -1190,7 +1190,7 @@ next.babies <- function(yr,w,newbaby){
   nextbabies[,"male"] <- as.numeric(runif(nrow(nextbabies))<=102.5/202.5)  
   
   nextbabies
-    
+  
 }
 
 #' Updates ceb when individuals have a baby
@@ -1200,7 +1200,7 @@ next.babies <- function(yr,w,newbaby){
 #' that year (TRUE) or not (FALSE). As computed by `new.babies`
 #' @return (matrix) Population matrix updated
 update.women.ceb <- function(w,newbaby){
-
+  
   w[newbaby,"ceb"] <- w[newbaby,"ceb"]+1
   
   w
@@ -1259,7 +1259,7 @@ mortality <- function(yr,w,prob.death.all){
   prob.death.thisyear.adj <- prob.death.thisyear*(1-w[,"hiv"]) + # HIV negative
     prob.death.thisyear.hiv.art*w[,'art'] + # HIV positive and in ART
     prob.death.thisyear.hiv.noart*(1-w[,'art'])*w[,'hiv'] # HIV positive and not in ART
-
+  
   # Determine randomly who died this year...
   died <- runif(nrow(w))<prob.death.thisyear.adj
   
@@ -1393,54 +1393,57 @@ ART.initiation <- function(yr,w,artprobs,threshold){
 #' @return (list) with elements: w, births.age.yr, hivbirths.momshiv updated.
 w.loop.pass <- function(yr,w,ages,years,hivinc_s,prob.birth.all,prob.birth.hiv,births.age.yr,hivbirths.momshiv,prob.vt.noart,prob.vt.art,prob.death.all,artprobs,threshold){
   
-    # count women by age group to normalize hiv incidence
-    counts <- count.women.age.groups(yr,w)
-    
-    # Update vector of HIV incidence rates
-    prob.hiv.vec <- prob.hiv.ages.years(ages,years,hivinc_s,counts["c15"],counts["c20"],counts["c25"],counts["c30"],counts["c35"],counts["c40"],counts["c45"])
-    
-    w <- update.women.age(yr,w)
-    
-    # Fertility  
-    
-    newbaby <- new.babies(yr,w,prob.birth.all,prob.birth.hiv)
-    
-    nextbabies <- next.babies(yr,w,newbaby)
-    
-    w <- update.women.ceb(w,newbaby)
-    
-    # births by age group for tfr
-    # women by age group for tfr
-    
-    births.age.yr <- update.birth.counts.by.age(births.age.yr,nextbabies,yr,counts["c15"],counts["c20"],counts["c25"],counts["c30"],counts["c35"],counts["c40"],counts["c45"])
-    
-    # Vertical transmission of HIV
-    nextbabies <- vertical.transmision.HIV(prob.vt.noart,prob.vt.art,nextbabies)
-    
-    
-    # births to HIV positive women
-    # HIV positive births tracker for realized VT
-    hivbirths.momshiv <- update.birth.counts.by.hiv.status(hivbirths.momshiv,nextbabies,yr)
-    
-    w <- rbind(w,nextbabies)
-    
-    # Mortality
-    
-    w<- mortality(yr,w,prob.death.all)
-    
-    # HIV infection
-    
-    w <- HIV.infection(yr,w,prob.hiv.vec)
-      
-      
-    # ART intiation
-    w <- ART.initiation(yr,w,artprobs,threshold)
-    
-    list(w=w,births.age.yr=births.age.yr,hivbirths.momshiv=hivbirths.momshiv)
+  # count women by age group to normalize hiv incidence
+  counts <- count.women.age.groups(yr,w)
+  
+  # Update vector of HIV incidence rates
+  prob.hiv.vec <- prob.hiv.ages.years(ages,years,hivinc_s,counts["c15"],counts["c20"],counts["c25"],counts["c30"],counts["c35"],counts["c40"],counts["c45"])
+  
+  w <- update.women.age(yr,w)
+  
+  # Fertility  
+  
+  newbaby <- new.babies(yr,w,prob.birth.all,prob.birth.hiv)
+  
+  nextbabies <- next.babies(yr,w,newbaby)
+  
+  w <- update.women.ceb(w,newbaby)
+  
+  # births by age group for tfr
+  # women by age group for tfr
+  
+  births.age.yr <- update.birth.counts.by.age(births.age.yr,nextbabies,yr,counts["c15"],counts["c20"],counts["c25"],counts["c30"],counts["c35"],counts["c40"],counts["c45"])
+  
+  # Vertical transmission of HIV
+  nextbabies <- vertical.transmision.HIV(prob.vt.noart,prob.vt.art,nextbabies)
+  
+  
+  # births to HIV positive women
+  # HIV positive births tracker for realized VT
+  hivbirths.momshiv <- update.birth.counts.by.hiv.status(hivbirths.momshiv,nextbabies,yr)
+  
+  w <- rbind(w,nextbabies)
+  
+  # Mortality
+  
+  w<- mortality(yr,w,prob.death.all)
+  
+  # HIV infection
+  
+  w <- HIV.infection(yr,w,prob.hiv.vec)
+  
+  
+  # ART intiation
+  w <- ART.initiation(yr,w,artprobs,threshold)
+  
+  list(w=w,births.age.yr=births.age.yr,hivbirths.momshiv=hivbirths.momshiv)
   
 }
 
-#' Computes general probabilities,
+#' Run simulation
+#' 
+#' @param yrstart (numeric) year to start the simulation
+#' @param yrend (numeric) year to end the simulation
 #' @param ages (numeric) vector of ages
 #' @param years (numeric) vector of years in simulation
 #' @param asfr_s (data.frame) estimates of age-specific fertility rates (ASFR) 
@@ -1506,10 +1509,10 @@ run.simulation <- function(yrstart,yrend,ages,years,asfr_s,tfr_s,sexactive15,art
   # Run simulation
   
   for (yr in yrstart:yrend) {
-   
+    
     # Run simulation pass
     result <- w.loop.pass(yr,w,ages,years,hivinc_s,prob.birth.all,prob.birth.hiv,births.age.yr,hivbirths.momshiv,prob.vt.noart,prob.vt.art,prob.death.all,artprobs,threshold)
-     
+    
     # Extract results
     
     w <- result$w
@@ -1524,3 +1527,264 @@ run.simulation <- function(yrstart,yrend,ages,years,asfr_s,tfr_s,sexactive15,art
   list(w=w,births.age.yr=births.age.yr,hivbirths.momshiv=hivbirths.momshiv)
   
 }
+
+##### RESULTS #####
+
+#' For each year, computes realized HIV prevalence, incidence, and realized ART coverage, prevalence
+#' 
+#' @param w (matrix) population matrix
+#' @param start_year (integer) year to start computation
+#' @param end_year (integer) year to end computation
+#' @return (list) with elements: hiv_prev (numeric) HIV prevalence, hiv_inc (numeric) HIV incidence,
+#' art_prev (numeric) ART prevalence, art_cov (numeric) ART coverage
+realized.hiv.art <- function(w,start_year,end_year){
+  
+  # Realized HIV prevalence, incidence
+  hiv_prev = NA
+  hiv_inc = NA
+  numpos = NA
+  num = NA
+  hivnew=NA
+  #And realized ART coverage, prevalence
+  num_elig = NA
+  num_art = NA
+  art_cov = NA
+  art_prev = NA
+  for (i in start_year:end_year){
+    
+    # Number of HIV positive women, alive, 15-49
+    hpos = subset(w,is.na(w[,"hiv_date"])==FALSE)
+    hpos2 = subset(hpos, hpos[,"hiv_date"]<=i)		
+    hpos3 = subset(hpos2,hpos2[,"dob"]<i-14 & hpos2[,"dob"]>i-49)
+    
+    # Women who didn't die in simulation 
+    hpos4a = subset(hpos3,is.na(hpos3[,"death_date"]))
+    
+    # Women who died after year i
+    hpos4b = subset(hpos3,hpos3[,"death_date"]>=i)
+    hpos5 = rbind(hpos4a,hpos4b)
+    numpos[i] = nrow(hpos5)
+    
+    # New HIV cases
+    hpos6 = subset(hpos5,hpos5[,"hiv_date"]==i)
+    hivnew[i] = nrow(hpos6)
+    
+    # Women eligible for ART but not on ART
+    num_elig1a = subset(hpos5, hpos5[,"art_e"]>0 & hpos5[,"art_e"]<=i & hpos5[,"art_date"]>i)
+    num_elig1b = subset(hpos5, hpos5[,"art_e"]>0 & hpos5[,"art_e"]<=i & hpos5[,"art_date"]==0)
+    num_elig2 = rbind(num_elig1a,num_elig1b) 
+    num_elig[i] = nrow(num_elig2)
+    
+    # Women on ART
+    num_art1 = subset(hpos5, hpos5[,"art_date"]<=i & hpos5[,"art_date"]>0)
+    num_art[i] = nrow(num_art1)
+    
+    # ART coverage in year i
+    art_cov[i] = num_art[i]/(num_elig[i]+num_art[i])
+    
+    # Total number of women 15-49 yrs old who were alive in year i
+    num_w = subset(w,w[,"dob"]<i-14 & w[,"dob"]>i-49)
+    num_w2 = subset(num_w,is.na(num_w[,"death_date"]))
+    num_w2a = subset(num_w,num_w[,"death_date"]>=i)
+    num_w3 = rbind(num_w2,num_w2a)
+    num[i] = nrow(num_w3)
+    
+    # HIV prevalence, HIV incidence, ART prevalence in year i
+    hiv_prev[i] = numpos[i]/num[i]
+    hiv_inc[i]= hivnew[i]/(num[i]-numpos[i]+hivnew[i])
+    art_prev[i] = num_art[i]/num[i]
+    
+    
+  }
+  
+  list(hiv_prev=hiv_prev, hiv_inc=hiv_inc, art_prev=art_prev, art_cov=art_cov)
+}
+
+
+#' Computes realized TFR per year
+#' 
+#' @param births.age.yr (matrix) Matrix of birth counts by age and year, 
+#' like the one provided by `birth.counts.by.age.empty.matrix`
+#' @param yrstart (numeric) year to start the simulation
+#' @param yrend (numeric) year to end the simulation
+#' @return (matrix) realzed tfr per year
+realized.tfr <- function(births.age.yr,yrstart,yrend){
+  
+  # Realized TFR
+  
+  asfr = births.age.yr[,"births"]/births.age.yr[,"women"]
+  asfr5 = asfr*5
+  tfr <- vector()
+  seq(1,length(births.age.yr[,1]),7)
+  for(k in seq(1,length(births.age.yr[,1]),7)){
+    tfr[(k+6)/7] <- asfr5[k]+asfr5[k+1]+asfr5[k+2]+asfr5[k+3]+asfr5[k+4]+asfr5[k+5]+asfr5[k+6] 
+  }
+  tfr <- cbind(seq(yrstart,yrend,1),tfr)
+  colnames(tfr) <- c("year","tfr")
+  
+  tfr
+  
+}
+
+#' For each year, computes realized vertical transmission
+#' 
+#' @param hivbirths.momshiv (matrix) Matrix of birth counts by HIV status and year, 
+#' like the one provided by `birth.counts.by.hiv.status.empty.matrix`
+#' @param start_year (integer) year to start computation
+#' @param end_year (integer) year to end computation
+#' @return (numeric) realized vertical transmission for each year
+realized.vert_trans <- function(hivbirths.momshiv,start_year,end_year){
+  
+  
+  #  Realized vertical transmission
+  vt=NA
+  for (i in start_year:end_year){
+    vt[i] = hivbirths.momshiv[,"birthpos"][hivbirths.momshiv[,"year"]==i]/hivbirths.momshiv[,"birthmompos"][hivbirths.momshiv[,"year"]==i]
+  }
+  
+  vt
+  
+}
+
+
+##### RUN SIMULATION #####
+
+
+hivhogan = read.csv("./data/inc_curves.csv",head=TRUE)
+mort_series = read.csv("./data/IHME_female_mortSMALL.csv",head=TRUE)
+adultmort = read.csv("./data/MLTfemSMALL.csv",head=TRUE)
+worldfert= read.csv("./data/world_fert.csv",head=TRUE)
+tfr_series= read.csv("./data/tfr_gapminder_long.csv",head=TRUE)
+art_series= read.csv("./data/sampleART.csv",head=TRUE)
+u5m_edit= read.csv("./data/u5m_edit.csv",head=TRUE)
+matmort = read.csv("./data/matmort.csv",head=TRUE)
+
+
+# CREATE PARAMETER SETS
+fertcountry=c("Botswana","Uganda")
+cm_cntry = c("Mali","Morocco")
+am_cntry = c("Madagascar","Sudan")
+sexactive15 = c(30,70)
+mmr0 = c(0.0012,0.012)
+mmr_dec = c(0,0.073) # annual percent decline in MMR
+curve= c("BotswanaUrban","LesothoRural","MalawiRural","UgandaRural","CamerounRural","zero","BotUrb2x")
+bfeed = c(6,18)
+art_col=c("zero","Botswana","Cameroon","Malawi","Bot_dub")
+growth= c(0.01,0.02)
+yrend=2010
+
+# expand.grid() will create dataset with unique combinations in each row
+
+inputs <- expand.grid(fertcountry, cm_cntry, am_cntry, sexactive15,mmr0,mmr_dec,curve,bfeed,art_col,growth,yrend)
+names(inputs) = c("fertcountry", "cm_cntry","am_cntry","sexactive15","mmr0","mmr_dec","curve","bfeed","art_col","growth","yrend")
+
+# Add HIV-free populations to hivhogan
+hivhogan$Country <- factor(hivhogan$Country,levels=c(levels(hivhogan$Country),"zero"))
+hivhogan[63,1] = "zero"
+hivhogan[63,c(2:47)]=0
+
+
+bigsim <- function(inp,initialpop){
+  
+  # CD4 threshold
+  
+  threshold = 200
+  
+  # Starting year
+  yrstart = 1946
+  
+  # Population growth
+  growth <- 0.03
+  
+  years <- c(1946:2010)
+  ages <- c(-100:120)
+  
+  arts <- c(0,1)
+  
+  # bigsim parses out the set of inputs
+  fertcountry= toString(inp$fertcountry)
+  cm_cntry = toString(inp$cm_cntry)
+  am_cntry = toString(inp$am_cntry)
+  sexactive15 = inp$sexactive15
+  mmr0 = inp$mmr0
+  mmr_dec = inp$mmr_dec
+  curve= toString(inp$curve)
+  bfeed = inp$bfeed
+  art_col = toString(inp$art_col)
+  yrend=inp$yrend
+  
+  # bigsim TAKES SUBSETS OF DATASETS
+  tfr_s = tfr_series[tfr_series[,"country"]==fertcountry,]
+  asfr_s=worldfert[worldfert[,"country"]==fertcountry,]
+  mort_s = mort_series[mort_series[,"country"]==am_cntry,]
+  u5m_c = subset(u5m_edit, country==cm_cntry)
+  artprobs=cbind(art_series[,"yr"],art_series[,art_col])
+  colnames(artprobs) = c("yr","artinc")
+  hivinc_s = hivhogan[hivhogan$Country==curve,]    
+  
+  # Run simulation
+  
+  ptm <- proc.time()
+  
+  simulation.result <- run.simulation(yrstart,yrend,ages,years,asfr_s,tfr_s,sexactive15,arts,mort_s,adultmort,am_cntry,matmort,u5m_c,bfeed,growth,initialpop,hivinc_s,artprobs,threshold)
+  
+  # Extract results
+  
+  w <- simulation.result$w
+  
+  births.age.yr <- simulation.result$births.age.yr
+  
+  hivbirths.momshiv <- simulation.result$hivbirths.momshiv
+  
+  
+  start_year <- 1980
+  
+  end_year <- 2010
+  
+  realized.hiv.art.result <- realized.hiv.art(w,start_year,end_year)
+  
+  hiv_prev <- realized.hiv.art.result$hiv_prev
+  hiv_inc <- realized.hiv.art.result$hiv_inc
+  art_prev <- realized.hiv.art.result$art_prev
+  art_cov <- realized.hiv.art.result$art_cov
+  
+  tfr <- realized.tfr(births.age.yr,yrstart,yrend)
+  
+  vt <- realized.vert_trans(hivbirths.momshiv,start_year,end_year) 
+  
+  hivdeathrate = NA
+  
+  hiv2010 <- hiv_prev[2010]
+  hiv2000 <- hiv_prev[2000]
+  hiv1990 <- hiv_prev[1990]
+  hiv1985 <- hiv_prev[1985]
+  
+  art2010 <- art_cov[2010]
+  art2008 <- art_cov[2008]
+  art2006 <- art_cov[2006]
+  art2004 <- art_cov[2004]
+  
+  art_prev2009 <- art_prev[2009]
+  art_prev2007 <- art_prev[2007]
+  art_prev2005 <- art_prev[2005]
+  
+  vt2010 <- vt[2010]
+  vt2000 <- vt[2000]
+  vt1990 <- vt[1990]
+  vt1985 <- vt[1985]
+  
+  tfr1980 <- tfr[,2][tfr[,1]==1980]
+  tfr1990 <- tfr[,2][tfr[,1]==1990]
+  tfr2000 <- tfr[,2][tfr[,1]==2000]
+  tfr2010 <- tfr[,2][tfr[,1]==2010]
+  
+  simt <- proc.time()-ptm
+  runsec <- as.numeric(simt[3])
+  
+  bigres <- data.frame(sexactive15,mmr0,mmr_dec,curve,bfeed,growth,hiv1985,hiv1990,hiv2000,hiv2010,art2004,art2006,art2008,art2010,vt2010,vt2000,vt1990,vt1985,art_prev2005,art_prev2007,art_prev2009,tfr1980,tfr1990,tfr2000,tfr2010,runsec)
+  
+  meta.res1 = list(bigres,tfr,art_cov[c(2000:2010)],hiv_prev[c(1980:2010)],hivdeathrate,inp,w,art_prev[c(2000:2010)],hiv_inc[c(1980:2010)])
+  
+  return(meta.res1)
+}
+
