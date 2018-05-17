@@ -26,7 +26,7 @@ require(yaml)
 
 base.path <- file.path(getwd(),".")
 
-source(file.path(base.path,"simulation.R"))
+source(file.path(base.path,"simulation_setup.R"))
 
 # 
 testsuite_simulation <- defineTestSuite("Simulation", dirs=c("./unit.test"), testFileRegexp = "test_simulation", testFuncRegexp = "^test_")
