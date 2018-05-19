@@ -1,4 +1,4 @@
-source("simulation_setup.R")
+source("simulation_functions.R")
 
 # Read data
 
