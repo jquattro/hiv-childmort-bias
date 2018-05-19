@@ -1392,7 +1392,7 @@ ART.initiation <- function(yr,w,artprobs,threshold){
 #' @param threshold (numeric) CD4 threshold. Bellow this value one person could start ART.
 #' @return (list) with elements: w, births.age.yr, hivbirths.momshiv updated.
 w.loop.pass <- function(yr,w,ages,years,hivinc_s,prob.birth.all,prob.birth.hiv,births.age.yr,hivbirths.momshiv,prob.vt.noart,prob.vt.art,prob.death.all,artprobs,threshold){
-  
+  print(paste(Sys.time(),":",yr))
   # count women by age group to normalize hiv incidence
   counts <- count.women.age.groups(yr,w)
   
@@ -1651,7 +1651,7 @@ realized.vert_trans <- function(hivbirths.momshiv,start_year,end_year){
 
 
 
-bigsim <- function(inp,initialpop,years,ages){
+bigsim <- function(inp,initialpop,years,ages,hivhogan,mort_series,adultmort,worldfert,tfr_series,art_series,u5m_edit,matmort){
   
   
   # Parse out the set of inputs

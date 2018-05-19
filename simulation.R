@@ -53,7 +53,7 @@ inp <- inputs[pset,]
 
 
 #Set size of initial population
-ip<-18000
+ip<-100
 
 years <- c(1946:2010)
 ages <- c(-100:120)
@@ -62,7 +62,7 @@ ages <- c(-100:120)
 # Generate population
 set.seed(1000)
 
-results <- bigsim(inp,initialpop=ip,years,ages)
+results <- bigsim(inp,initialpop=ip,years,ages,hivhogan,mort_series,adultmort,worldfert,tfr_series,art_series,u5m_edit,matmort)
 
 
 
