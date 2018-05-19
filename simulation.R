@@ -1,6 +1,17 @@
-##### SIMULATION #####
-
 source("simulation_functions.R")
+
+source("indirect_estimates_functions.R")
+
+if(!dir.exists("./results/figdata")){
+  dir.create("./results/figdata",recursive = TRUE)
+}
+
+if(!dir.exists("./results/regdata")){
+  dir.create("./results/regdata",recursive = TRUE)
+}
+
+
+##### SIMULATION #####
 
 # Read data
 
@@ -47,55 +58,130 @@ threshold <- 200
 inputs <- expand.grid(fertcountry, cm_cntry, am_cntry, sexactive15,mmr0,mmr_dec,curve,bfeed,art_col,growth,yrend,yrstart,threshold)
 names(inputs) = c("fertcountry", "cm_cntry","am_cntry","sexactive15","mmr0","mmr_dec","curve","bfeed","art_col","growth","yrend","yrstart","threshold")
 
+file_number_format <- paste0("%0",nchar(as.character(nrow(inputs))),"d")
 
-# Select one set of parameters
+# Parameter sets already processed
 
-pset <- 1
-inp <- inputs[pset,]
+psets_already <- table(
+  c(
+    as.integer(gsub("regdata\\.|\\.Rdata","",list.files("./results/regdata",pattern = "regdata.\\d+",full.names = FALSE))),
+    as.integer(gsub("figdata\\.|\\.Rdata","",list.files("./results/figdata",pattern = "figdata.\\d+",full.names = FALSE))))
+)
 
+psets_already <- data.frame(psets_already)
 
+psets_already <- as.integer(as.character(psets_already[psets_already$Freq==2,"Var1"]))
+           
+psets_to_process <- setdiff(1:nrow(inputs),psets_already)
+ 
 #Set size of initial population
-ip<-18000
+ 
+ip<-10
 
 years <- c(1946:2010)
 ages <- c(-100:120)
 
+         
+# Run simulation for each set of parameters
 
-# Generate population
-set.seed(1000)
+for(pset in psets_to_process){
+  
+  inp <- inputs[pset,]
+  
+  
+  
+  
+  
+  # Generate population
+  set.seed(1000)
+  
+  results <- bigsim(inp,initialpop=ip,years,ages,hivhogan,mort_series,adultmort,worldfert,tfr_series,art_series,u5m_edit,matmort)
+  
+  
+  ##### INDIRECT ESTIMATES #####
+  
+  
+  
+  w <- results[[7]]
+  
+  # format data
+  momkidsclean <- as.data.frame(w)
+  
+  # Using all surviving women
+  isf <-ind_est(momkidsclean)
+  
+  
+  # Using all women
+  isf_all <-ind_est_all(momkidsclean)
+  
+  #Using surviving women and women who died from HIV
+  isf_hiv <- ind_est_hiv(momkidsclean)
+  
+  ie.three <- cbind(isf,isf_all,isf_hiv,pset)
+  
+  
+  
+  ###################################################################
+  # merge ie.three.Rdata with necessary info from pop20000vec.iZ.Rdata
+  ###################################################################
+  
+  regdata <- cbind(ie.three,results[[1]])
+  figdata <- results[c(2:7,10:12)]
+  
+  save(regdata,file=file.path("results/regdata",paste("regdata.",sprintf(file_number_format,pset),".Rdata",sep="")))
+  save(figdata,file=file.path("results/figdata",paste("figdata.",sprintf(file_number_format,pset),".Rdata",sep="")))
+  
+  rm(results,regdata,figdata,momkidsclean,isf,isf_all,isf_hiv,ie.three)
+}
 
-results <- bigsim(inp,initialpop=ip,years,ages,hivhogan,mort_series,adultmort,worldfert,tfr_series,art_series,u5m_edit,matmort)
+##### COLLECT DATA FROM ALL SIMULATIONS #####
+
+h <- list()
+tf<- list()
+ar<- list()
+hd<- list()
+u5m <- list()
+inps <- list()
+arp <- list()
+u5mhiv <- list()
+hivinc <- list()
 
 
-##### INDIRECT ESTIMATES #####
+for(filename in sort(list.files("./results/figdata",pattern = "figdata.\\d+",full.names = TRUE))){
+    
+  tryCatch({
+    load(filename)
+    
+    i <- as.integer(gsub("figdata\\.|\\.Rdata","",basename(filename)))
+    h[[i]] <- figdata[[3]]
+    tf[[i]] <- figdata[[1]]
+    ar[[i]] <- figdata[[2]]
+    hd[[i]] <- figdata[[4]]
+    u5m[[i]] <- figdata[[5]]
+    inps[[i]] <- figdata[[6]]
+    arp[[i]] <- figdata[[7]]
+    u5mhiv[[i]] <- figdata[[8]]
+    hivinc[[i]] <- figdata[[9]]
+    rm(figdata)
+    
+  }, error=function(e){cat("ERROR :",conditionMessage(e), "\n")})
+}
 
-source("indirect_estimates_functions.R")
-
-w <- results[[7]]
-
-# format data
-momkidsclean <- as.data.frame(w)
-
-# Using all surviving women
-isf <-ind_est(momkidsclean)
-
-
-# Using all women
-isf_all <-ind_est_all(momkidsclean)
-
-#Using surviving women and women who died from HIV
-isf_hiv <- ind_est_hiv(momkidsclean)
-
-ie.three <- cbind(isf,isf_all,isf_hiv,pset)
+save(h,tf,ar,hd,u5m,inps,arp,u5mhiv,hivinc,file="./results/figdata_all.Rdata")
 
 
 
-###################################################################
-# merge ie.three.Rdata with necessary info from pop20000vec.iZ.Rdata
-###################################################################
+nbd2k=NA
 
-regdata <- cbind(ie.three,results[[1]])
-figdata <- results[c(2:7,10:12)]
 
-save(regdata,file=paste("180228regdata.",pset,".Rdata",sep=""))
-save(figdata,file=paste("180228figdata.",pset,".Rdata",sep=""))
+for(filename in sort(list.files("./results/regdata",pattern = "regdata.\\d+",full.names = TRUE))){
+  
+  tryCatch({
+    load(filename)
+    nbd2k <- rbind(nbd2k,regdata)
+    rm(regdata)
+    
+  }, error=function(e){cat("ERROR :",conditionMessage(e), "\n")})
+}
+
+save(nbd2k,file="./results/regdata_all.Rdata")
