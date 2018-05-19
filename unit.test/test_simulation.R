@@ -507,12 +507,13 @@ test_init.dob_01 <-function(){
   
   growth=0.03
   
+  yrstart= 1946
   
   population <- Reduce(function(x,y) x*(1+growth),1:50,accumulate = TRUE)*initialpop %>% floor
   
-  target <- mapply(function(pop,year) rep(year,pop), population,1897:(1896+50)) %>% unlist
+  target <- mapply(function(pop,year) rep(year,pop), population,(yrstart-50+1):(yrstart)) %>% unlist
   
-  test <- initial.DOBs(growth,initialpop)
+  test <- initial.DOBs(growth,initialpop,yrstart)
   
   checkEquals(target,test)
   
@@ -1269,4 +1270,99 @@ test_run.simulation_01 <- function(){
   
   checkEquals(target,test)
   
+}
+
+
+test_children.dead.per.mother_01 <- function(){
+  
+  art_series= read.csv("data/sampleART.csv",head=TRUE)
+  
+  art_col=c("Botswana")
+  
+  artprobs=cbind(art_series[,"yr"],art_series[,art_col])
+  
+  colnames(artprobs) = c("yr","artinc")
+  
+  threshold = 200
+  
+  
+  # HIV infection
+  
+  years <- c(1946:2010)
+  ages <- c(-100:120)
+  
+  hivhogan = read.csv(file.path(base.path,"data/inc_curves.csv"),head=TRUE)
+  
+  curve= "BotswanaUrban"
+  hivinc_s = hivhogan[hivhogan$Country==curve,]  
+  
+  # Mortality
+  
+  matmort = read.csv(file.path(base.path,"data/matmort.csv"),head=TRUE)
+  mort_series = read.csv(file.path(base.path,"data/IHME_female_mortSMALL.csv"),head=TRUE)
+  adultmort = read.csv(file.path(base.path,"data/MLTfemSMALL.csv"),head=TRUE)
+  
+  years <- c(1946:2010)
+  ages <- c(-100:120)
+  
+  
+  am_cntry <- "Madagascar"
+  
+  cm_cntry <- "Mali"
+  
+  
+  mort_s <- mort_series %>% filter(country==am_cntry)
+  
+  
+  u5m_edit<- read.csv(file.path(base.path,"data/u5m_edit.csv"),head=TRUE) 
+  u5m_c <- subset(u5m_edit, country==cm_cntry)
+  
+  
+  # Vertical trasmission HIV
+  
+  bfeed <- 18
+  
+  # Fertility
+  
+  fertcountry <- "Botswana"
+  
+  worldfert <-  read.csv(file.path(base.path,"data/world_fert.csv"),head=TRUE)
+  tfr_series <-  read.csv(file.path(base.path,"data/tfr_gapminder_long.csv"),head=TRUE)
+  
+  tfr_s <-  tfr_series[tfr_series[,"country"]==fertcountry,]
+  asfr_s <- worldfert[worldfert[,"country"]==fertcountry,]
+  
+  
+  arts <- c(0,1)
+  
+  
+  sexactive15 <- 0.6
+  
+  yrstart <- 1946
+  
+  yrend <- 2010
+  
+  growth=0.03
+  
+  initialpop=10
+  
+  
+  set.seed(300)
+  
+  results <- run.simulation(yrstart,yrend,ages,years,asfr_s,tfr_s,sexactive15,arts,mort_s,adultmort,am_cntry,matmort,u5m_c,bfeed,growth,initialpop,hivinc_s,artprobs,threshold)
+  
+  w <- results$w
+
+  target <- w %>% as.data.frame() %>% mutate(dead=as.integer(!is.na(death_date))) 
+
+  cd <- target %>% group_by(momid) %>% summarise(cd=sum(dead)) %>% ungroup
+  
+  target %<>% select(-cd) %>% left_join(cd,by=c(id="momid")) %>% mutate(cd=case_when(is.na(cd)~ as.integer(0),TRUE~cd)) %>% as.matrix
+
+  test<- children.dead.per.mother(w)
+  
+  target <- target[,colnames(test)]
+  
+  checkEquals(target,test)
+        
 }

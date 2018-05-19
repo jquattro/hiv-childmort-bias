@@ -453,7 +453,7 @@ art.surv.vec <- function(year,cd4,art_date){
   # pacients have 50% probability of having high viral load ("symptomatic")
   # ART-LINC ART-CC Lancet 2006 50% patients have high viral load
   
-  hvl <- ifelse(runif(length(cd4))<0.5,1,0)
+  hvl <- as.integer(runif(length(cd4))<0.5)
   
   # If a patient doesnot have high viral load, she has a low viral load. ("non-symptomatic")
   lvl <- 1 - hvl
@@ -476,7 +476,12 @@ art.surv.vec <- function(year,cd4,art_date){
   
   # select only cases with the right amount of CD4 and one year since ART initiation 
   
-  hvl.cd450.y1.select <- hvl*ifelse(cd4<50 & t==1,1,0) 
+  cd450.select <- cd4<50
+  y1 <- t==1
+  
+  cd450.y1.select <- cd450.select & y1 #ifelse(cd4<50 & t==1,1,0) 
+  
+  hvl.cd450.y1.select <- hvl*cd450.y1.select
   
   # Use Weibull distribution to compute probability after the first year
   
@@ -484,35 +489,80 @@ art.surv.vec <- function(year,cd4,art_date){
   
   # select only cases with the right amount of CD4 and more than one year since ART initiation 
   
-  hvl.cd450.yg1.select <- hvl*ifelse(cd4<50 & t>1,1,0)
+  yg1 <- t>1
+  
+  cd450.yg1.select <- cd450.select & yg1 #ifelse(cd4<50 & t>1,1,0)
+  
+  hvl.cd450.yg1.select <- hvl* cd450.yg1.select
   
   # CD4 in  [50,100)
   
   hvl.cd4100.y1 <- .67
-  hvl.cd4100.y1.select <- hvl*ifelse(cd4>=50 & cd4<100 & t==1,1,0)
+  
+  cd4100.select <- cd4>=50 & cd4<100
+  
+  cd4100.y1.select <- cd4100.select & y1
+  
+  hvl.cd4100.y1.select <- hvl*cd4100.y1.select #ifelse(cd4>=50 & cd4<100 & t==1,1,0)
   hvl.cd4100.yg1 <- weib.tp(t,16,shape)
-  hvl.cd4100.yg1.select <- hvl*ifelse(cd4>=50 & cd4<100 & t>1,1,0)
+  cd4100.yg1.select <- cd4100.select & yg1
+  hvl.cd4100.yg1.select <- hvl*cd4100.yg1.select#ifelse(cd4>=50 & cd4<100 & t>1,1,0)
   
   # CD4 in  [100,200)
   
   hvl.cd4200.y1 <- .46
-  hvl.cd4200.y1.select <- hvl*ifelse(cd4>=100 & cd4<200 & t==1,1,0)
+  
+  cd4200.select <- cd4>=100 & cd4<200
+  
+  cd4200.y1.select <- cd4200.select & y1
+  
+  hvl.cd4200.y1.select <- hvl*cd4200.y1.select
+  
+  #hvl.cd4200.y1.select <- hvl*ifelse(cd4>=100 & cd4<200 & t==1,1,0)
   hvl.cd4200.yg1 <- weib.tp(t,16.9,shape)
-  hvl.cd4200.yg1.select <- hvl*ifelse(cd4>=100 & cd4<200 & t>1,1,0)
+  
+  cd4200.yg1.select <- cd4200.select & yg1
+  hvl.cd4200.yg1.select <- hvl*cd4200.yg1.select
+  
+  #hvl.cd4200.yg1.select <- hvl*ifelse(cd4>=100 & cd4<200 & t>1,1,0)
   
   # CD4 in  [200,350)
   
   hvl.cd4350.y1 <- .17
-  hvl.cd4350.y1.select <- hvl*ifelse(cd4>=200 & cd4<350 & t==1,1,0)
+  
+  cd4350.select <- cd4>=200 & cd4<350
+  
+  cd4350.y1.select <- cd4350.select & y1
+  
+  hvl.cd4350.y1.select <- hvl*cd4350.y1.select
+  
+  #hvl.cd4350.y1.select <- hvl*ifelse(cd4>=200 & cd4<350 & t==1,1,0)
   hvl.cd4350.yg1 <- weib.tp(t,23.3,shape)
-  hvl.cd4350.yg1.select <- hvl*ifelse(cd4>=200 & cd4<350 & t>1,1,0)
+  
+  cd4350.yg1.select <- cd4350.select & yg1
+  hvl.cd4350.yg1.select <- hvl*cd4350.yg1.select
+  
+  #hvl.cd4350.yg1.select <- hvl*ifelse(cd4>=200 & cd4<350 & t>1,1,0)
   
   # CD4 >= 350
   
   hvl.cd4g350.y1 <- .17
-  hvl.cd4g350.y1.select <- hvl*ifelse(cd4>=350 & t==1,1,0)
+  
+  cd4g350.select <- cd4>=350
+  
+  cd4g350.y1.select <- cd4g350.select & y1
+  
+  hvl.cd4g350.y1.select <- hvl*cd4g350.y1.select
+  
+  
+  #hvl.cd4g350.y1.select <- hvl*ifelse(cd4>=350 & t==1,1,0)
   hvl.cd4g350.yg1 <- weib.tp(t,33.3,shape)
-  hvl.cd4g350.yg1.select <- hvl*ifelse(cd4>=350 & t>1,1,0)
+  
+  cd4g350.yg1.select <- cd4g350.select & yg1
+  hvl.cd4g350.yg1.select <- hvl*cd4g350.yg1.select
+  
+  
+  #hvl.cd4g350.yg1.select <- hvl*ifelse(cd4>=350 & t>1,1,0)
   
   # Probabilities for "non-symptomatic" 
   
@@ -521,37 +571,67 @@ art.surv.vec <- function(year,cd4,art_date){
   # CD4 < 50
   
   lvl.cd450.y1 <- .109
-  lvl.cd450.y1.select <- lvl*ifelse(cd4<50 & t==1,1,0)
+  
+  lvl.cd450.y1.select <- lvl*cd450.y1.select
+  
+  #lvl.cd450.y1.select <- lvl*ifelse(cd4<50 & t==1,1,0)
   lvl.cd450.yg1 <- weib.tp(t,24.4,shape)
-  lvl.cd450.yg1.select <- lvl*ifelse(cd4<50 & t>1,1,0)
+  
+  lvl.cd450.yg1.select <- lvl*cd450.yg1.select
+  
+  #lvl.cd450.yg1.select <- lvl*ifelse(cd4<50 & t>1,1,0)
   
   # CD4 in  [50,100)
   
   lvl.cd4100.y1 <- .67
-  lvl.cd4100.y1.select <- lvl*ifelse(cd4>=50 & cd4<0 & t==1,1,0)
+  
+  lvl.cd4100.y1.select <- lvl*cd4100.y1.select
+  
+  #lvl.cd4100.y1.select <- lvl*ifelse(cd4>=50 & cd4<100 & t==1,1,0)
   lvl.cd4100.yg1 <- weib.tp(t,28.4,shape)
-  lvl.cd4100.yg1.select <- lvl*ifelse(cd4>=50 & cd4<100 & t>1,1,0)
+  
+  lvl.cd4100.yg1.select <- lvl*cd4100.yg1.select
+  
+  #lvl.cd4100.yg1.select <- lvl*ifelse(cd4>=50 & cd4<100 & t>1,1,0)
   
   # CD4 in  [100,200)
   
   lvl.cd4200.y1 <- .46
-  lvl.cd4200.y1.select <- lvl*ifelse(cd4>=100 & cd4<200 & t==1,1,0)
+  
+  lvl.cd4200.y1.select <- lvl*cd4200.y1.select
+  
+  #lvl.cd4200.y1.select <- lvl*ifelse(cd4>=100 & cd4<200 & t==1,1,0)
   lvl.cd4200.yg1 <- weib.tp(t,30.1,shape)
-  lvl.cd4200.yg1.select <- lvl*ifelse(cd4>=100 & cd4<200 & t>1,1,0)
+  
+  lvl.cd4200.yg1.select <- lvl*cd4200.yg1.select
+  
+  #lvl.cd4200.yg1.select <- lvl*ifelse(cd4>=100 & cd4<200 & t>1,1,0)
   
   # CD4 in  [200,350)
   
   lvl.cd4350.y1 <- .17
-  lvl.cd4350.y1.select <- lvl*ifelse(cd4>=200 & cd4<350 & t==1,1,0)
+  
+  lvl.cd4350.y1.select <- lvl*cd4350.y1.select
+  
+  #lvl.cd4350.y1.select <- lvl*ifelse(cd4>=200 & cd4<350 & t==1,1,0)
   lvl.cd4350.yg1 <- weib.tp(t,41.4,shape)
-  lvl.cd4350.yg1.select <- lvl*ifelse(cd4>=200 & cd4<350 & t>1,1,0)
+  
+  lvl.cd4350.yg1.select <- lvl*cd4350.yg1.select
+  
+  #lvl.cd4350.yg1.select <- lvl*ifelse(cd4>=200 & cd4<350 & t>1,1,0)
   
   # CD4 >= 350
   
   lvl.cd4g350.y1 <- .17
-  lvl.cd4g350.y1.select <- lvl*ifelse(cd4>=350 & t==1,1,0)
+  
+  lvl.cd4g350.y1.select <- lvl*cd4g350.y1.select
+  
+  #lvl.cd4g350.y1.select <- lvl*ifelse(cd4>=350 & t==1,1,0)
   lvl.cd4g350.yg1 <- weib.tp(t,59.1,shape)
-  lvl.cd4g350.yg1.select <- lvl*ifelse(cd4>=350 & t>1,1,0)
+  
+  lvl.cd4g350.yg1.select <- lvl*cd4g350.yg1.select
+  
+  #lvl.cd4g350.yg1.select <- lvl*ifelse(cd4>=350 & t>1,1,0)
   
   # Each block above computes a vector of probabilities and a vector that can be used to select which
   # cases fit in a given category (for example CD4 <50, t==1 and lvl). So, to get the probabilities for each 
@@ -691,7 +771,7 @@ prob.hiv <- function(age,year,hivinc_s,c15,c20,c25,c30,c35,c40,c45){
     
     # Get the incidence value for current year
     hivcol = (year-1970)+2
-    hivinc = hivinc_s[hivcol]
+    hivinc = as.numeric(hivinc_s[hivcol])
     
     # Compute probability at specific ages.
     
@@ -699,13 +779,15 @@ prob.hiv <- function(age,year,hivinc_s,c15,c20,c25,c30,c35,c40,c45){
     
     # First compute incidence for the reference group: ages 25-29 
     
-    inc2529=hivinc/(.594*(c15/(c15+c20+c25+c30+c35+c40+c45))
-                    +1.325*(c20/(c15+c20+c25+c30+c35+c40+c45))
-                    +(c25/(c15+c20+c25+c30+c35+c40+c45))
-                    +.752*(c30/(c15+c20+c25+c30+c35+c40+c45))
-                    +.635*(c35/(c15+c20+c25+c30+c35+c40+c45))
-                    +.551*(c40/(c15+c20+c25+c30+c35+c40+c45))
-                    +.356*(c45/(c15+c20+c25+c30+c35+c40+c45))
+    normalization <- c15+c20+c25+c30+c35+c40+c45
+    
+    inc2529=hivinc/(.594*(c15/(normalization))
+                    +1.325*(c20/(normalization))
+                    +(c25/(normalization))
+                    +.752*(c30/(normalization))
+                    +.635*(c35/(normalization))
+                    +.551*(c40/(normalization))
+                    +.356*(c45/(normalization))
     )
     
     # Now, use use age-specific HIV incidence ratios from Heuveline (2003) to compute risk at each age group
@@ -854,32 +936,28 @@ cd4.prog <- function(cd4,cd4dec, hivdate,year){
 ##### SIMULATION #####
 
 
-#' Date of birth for initial age structure
+#' Date of birth for initial age structure.
+#' 
+#' Dates are computed for the 50 years previous to the beginning of the simulation.
+#' We start with initialpop and each year population grows according to the growth rate
 #' 
 #' @param growth (numeric) yearly population growth rate
 #' @param initialpop (integer) initial population
+#' @param yrstart (numeric) year to start the simulation
 #' @return (numeric) date of birth
-initial.DOBs <- function(growth,initialpop){
+initial.DOBs <- function(growth,initialpop,yrstart){
   
-  # Compute total population for each step
+  # Compute total population for each year
   
-  ratios <- rep(1,50)
-  for(i in 1:50){
-    ratios[i+1]=ratios[i]*(1+growth)
-  }
+  ratios <- (1+growth) ^ (0:49)
+  
   population = ratios*initialpop
   
-  # Compute DOB for each step, starting at 1897
+  # Compute DOB for each year, starting at 1897
   
-  dobs = NA
-  counter=1
-  for(i in 1:50){
-    k = population[i]
-    for(j in 1:k){
-      dobs[counter]=i+1896
-      counter=counter+1
-    }
-  }
+  
+  dobs <- rep((yrstart-50+1):yrstart,times=as.integer(population))
+  
   
   dobs  
   
@@ -1057,41 +1135,36 @@ count.women.age.groups <- function(yr,w){
   
   # For each age category, count hoy many people are not dead in that age category 
   
+  not_death <- is.na(w[,"death_date"]) | (!is.na(w[,"death_date"]) &  yr<w[,"death_date"])
+  
   
   # Ages 15-19
-  x = is.na(w[,"death_date"]) & yr-w[,"dob"]<20 & yr-w[,"dob"]>14
-  x1 = !is.na(w[,"death_date"]) & yr-w[,"dob"]<20 & yr-w[,"dob"]>14 & yr<w[,"death_date"] 
-  c15 =   sum(x==T) + sum(x1==T)
+  
+  c15 =   sum( not_death & yr-w[,"dob"]<20 & yr-w[,"dob"]>14)
   
   # Ages 20-24
-  x = is.na(w[,"death_date"]) & yr-w[,"dob"]<25 & yr-w[,"dob"]>19
-  x1 = !is.na(w[,"death_date"]) & yr-w[,"dob"]<25 & yr-w[,"dob"]>19 & yr<w[,"death_date"] 
-  c20 =   sum(x==T) + sum(x1==T)
+  
+  c20 =   sum( not_death & yr-w[,"dob"]<25 & yr-w[,"dob"]>19)
   
   # Ages 25-29
-  x = is.na(w[,"death_date"]) & yr-w[,"dob"]<30 & yr-w[,"dob"]>24
-  x1 = !is.na(w[,"death_date"]) & yr-w[,"dob"]<30 & yr-w[,"dob"]>24 & yr<w[,"death_date"] 
-  c25 =   sum(x==T) + sum(x1==T)
+  
+  c25 =   sum( not_death & yr-w[,"dob"]<30 & yr-w[,"dob"]>24)
   
   # Ages 30-34
-  x = is.na(w[,"death_date"]) & yr-w[,"dob"]<35 & yr-w[,"dob"]>29
-  x1 = !is.na(w[,"death_date"]) & yr-w[,"dob"]<35 & yr-w[,"dob"]>29 & yr<w[,"death_date"] 
-  c30 =   sum(x==T) + sum(x1==T)
+  
+  c30 =   sum( not_death & yr-w[,"dob"]<35 & yr-w[,"dob"]>29)
   
   # Ages 35-39
-  x = is.na(w[,"death_date"]) & yr-w[,"dob"]<40 & yr-w[,"dob"]>34
-  x1 = !is.na(w[,"death_date"]) & yr-w[,"dob"]<40 & yr-w[,"dob"]>34 & yr<w[,"death_date"] 
-  c35 =   sum(x==T) + sum(x1==T)
+  
+  c35 =   sum( not_death & yr-w[,"dob"]<40 & yr-w[,"dob"]>34)
   
   # Ages 40-44
-  x = is.na(w[,"death_date"]) & yr-w[,"dob"]<45 & yr-w[,"dob"]>39
-  x1 = !is.na(w[,"death_date"]) & yr-w[,"dob"]<45 & yr-w[,"dob"]>39 & yr<w[,"death_date"] 
-  c40 =   sum(x==T) + sum(x1==T)
+  
+  c40 =   sum( not_death & yr-w[,"dob"]<45 & yr-w[,"dob"]>39)
   
   # Ages 45-49
-  x = is.na(w[,"death_date"]) & yr-w[,"dob"]<50 & yr-w[,"dob"]>44
-  x1 = !is.na(w[,"death_date"]) & yr-w[,"dob"]<50 & yr-w[,"dob"]>44 & yr<w[,"death_date"] 
-  c45 =   sum(x==T) + sum(x1==T)
+  
+  c45 =   sum( not_death & yr-w[,"dob"]<50 & yr-w[,"dob"]>44)
   
   # Return vector with counts
   
@@ -1130,14 +1203,16 @@ update.women.age <- function(yr,w){
 #' that year (TRUE) or not (FALSE).
 new.babies <- function(yr,w,prob.birth.all,prob.birth.hiv){
   
+  ages.as.char <- as.character(w[,"age"])
+  
   # Get probability of birth this year for each woman in w. HIV negative
-  prob.birth.thisyear <- prob.birth.all[as.character(yr),as.character(w[,"age"])]
+  prob.birth.thisyear <- prob.birth.all[as.character(yr),ages.as.char]
   
   # Compute probability of birth thi yeat for each woman. HIV positive in ART
-  prob.birth.thisyear.hiv.art <- prob.birth.thisyear*prob.birth.hiv[as.character(w[,"age"]),"1"]
+  prob.birth.thisyear.hiv.art <- prob.birth.thisyear*prob.birth.hiv[ages.as.char,"1"]
   
   # Compute probability of birth thi yeat for each woman. HIV positive not in ART
-  prob.birth.thisyear.hiv.noart <- prob.birth.thisyear*prob.birth.hiv[as.character(w[,"age"]),"0"]
+  prob.birth.thisyear.hiv.noart <- prob.birth.thisyear*prob.birth.hiv[ages.as.char,"0"]
   
   # Combine the three vectors above to get the probability of birth for each woman
   
@@ -1492,7 +1567,7 @@ run.simulation <- function(yrstart,yrend,ages,years,asfr_s,tfr_s,sexactive15,art
   
   # Date of birth for initial population
   
-  dobs <- initial.DOBs(growth,initialpop)
+  dobs <- initial.DOBs(growth,initialpop,yrstart)
   
   # Empty population matrix
   
@@ -1646,6 +1721,40 @@ realized.vert_trans <- function(hivbirths.momshiv,start_year,end_year){
   
 }
 
+#' Calculates children dead per mother
+#' 
+#' @param w (matrix) population matrix
+#' @return (matrix) population matrix with cd and dead updated
+children.dead.per.mother <- function(w){
+  
+  # Who died during the simulation
+  
+  w[,"dead"] <- !is.na(w[,"death_date"])
+  
+  # Get children dead
+  
+  y <- w[!is.na(w[,"momid"]) & w[,"dead"],]
+  
+  # Count children dead per mother
+  
+  cd <- data.frame(table(y[,"momid"]))
+  
+  names(cd) <- c("id","cd2")
+  
+  # Merge with women matrix
+  
+  w <- as.matrix(merge(w,cd,by="id",all.x=TRUE))
+  
+  w[,"cd"] <- w[,"cd2"]
+  
+  w[,"cd"][is.na(w[,"cd"])]<- 0
+  
+  w <- w[,colnames(w) != "cd2"]
+  
+ 
+  w
+  
+}
 
 ##### RUN SIMULATION #####
 
@@ -1689,6 +1798,11 @@ bigsim <- function(inp,initialpop,years,ages,hivhogan,mort_series,adultmort,worl
   # Extract results
   
   w <- simulation.result$w
+  
+  # Calculate children dead per mother    
+  
+  w <- children.dead.per.mother(w)
+  
   
   births.age.yr <- simulation.result$births.age.yr
   
