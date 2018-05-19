@@ -1,3 +1,5 @@
+##### SIMULATION #####
+
 source("simulation_functions.R")
 
 # Read data
@@ -53,7 +55,7 @@ inp <- inputs[pset,]
 
 
 #Set size of initial population
-ip<-100
+ip<-18000
 
 years <- c(1946:2010)
 ages <- c(-100:120)
@@ -65,31 +67,18 @@ set.seed(1000)
 results <- bigsim(inp,initialpop=ip,years,ages,hivhogan,mort_series,adultmort,worldfert,tfr_series,art_series,u5m_edit,matmort)
 
 
+##### INDIRECT ESTIMATES #####
 
-###################################################
-# Code for indirect estimates
-###################################################
+source("indirect_estimates_functions.R")
 
-i = pset
-
-source("indest.setup.full.R")
-# 
-# #for (i in start:end){
-# 
-# if(file.exists(paste("pop20000vec.i",i,".Rdata",sep=""))==TRUE){
-#   load(paste("pop20000vec.i",i,".Rdata",sep=""))
-#   
-#   # Take data from big pop
-u5m <- results[[6]]
-newbabies <- results[[8]]
-w <- results[[9]]
+w <- results[[7]]
 
 # format data
-momkidsclean <- momkids.fun(u5m,newbabies,w)
+momkidsclean <- as.data.frame(w)
 
 # Using all surviving women
 isf <-ind_est(momkidsclean)
-#ie.three <- as.data.frame(isf)
+
 
 # Using all women
 isf_all <-ind_est_all(momkidsclean)
@@ -97,9 +86,9 @@ isf_all <-ind_est_all(momkidsclean)
 #Using surviving women and women who died from HIV
 isf_hiv <- ind_est_hiv(momkidsclean)
 
-ie.three <- cbind(isf,isf_all,isf_hiv,i)
+ie.three <- cbind(isf,isf_all,isf_hiv,pset)
 
-#save(ie.three,file=paste("ie.three.",i,".Rdata",sep=""))
+
 
 ###################################################################
 # merge ie.three.Rdata with necessary info from pop20000vec.iZ.Rdata
@@ -108,5 +97,5 @@ ie.three <- cbind(isf,isf_all,isf_hiv,i)
 regdata <- cbind(ie.three,results[[1]])
 figdata <- results[c(2:7,10:12)]
 
-save(regdata,file=paste("180228regdata.",i,".Rdata",sep=""))
-save(figdata,file=paste("180228figdata.",i,".Rdata",sep=""))
+save(regdata,file=paste("180228regdata.",pset,".Rdata",sep=""))
+save(figdata,file=paste("180228figdata.",pset,".Rdata",sep=""))

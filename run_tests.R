@@ -29,11 +29,11 @@ base.path <- file.path(getwd(),".")
 source(file.path(base.path,"simulation_functions.R"))
 
 # 
-testsuite_simulation <- defineTestSuite("Simulation", dirs=c("./unit.test"), testFileRegexp = "test_simulation", testFuncRegexp = "^test_")
+testsuite <- defineTestSuite("Simulation", dirs=c("./unit.test"), testFileRegexp = "test_", testFuncRegexp = "^test_")
 
-test.result_simulation <- runTestSuite(testsuite_simulation)
+test.result <- runTestSuite(testsuite)
 
  
-printTextProtocol(test.result_simulation)
+printTextProtocol(test.result)
 
 rm(list = ls())
