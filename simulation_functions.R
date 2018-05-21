@@ -1612,7 +1612,7 @@ run.simulation <- function(yrstart,yrend,ages,years,asfr_s,tfr_s,sexactive15,art
   
   # Annual probability of death, HIV negative women for each age year combination
   
-  prob.death.all <- phivneg.death.ages.years(ages,years,mort_s,adultmort,am_cntry,matmort,u5m_c,prob.death.all,mmr0,mmr_dec)
+  prob.death.all <- phivneg.death.ages.years(ages,years,mort_s,adultmort,am_cntry,matmort,u5m_c,prob.birth.all,mmr0,mmr_dec)
   
   # Probability of mother to child transmission of HIV. Mother not in ART
   
