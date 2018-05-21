@@ -216,7 +216,52 @@ prob.birth.hiv <- function(ages,sexactive15,arts){
 
 ##### MORTALITY #####
 
-
+#' Per birth prob of death
+#' 
+#' Hogan et al IHME find annual rates of decline, SSA, 1990-2008, no HIV: 0% to 7.4%
+#' MMR (no HIV) range, 2008: 53 to 879 per 100,000 births (implies 123 to 1296 in 1990)
+#' Blanc et al find MMR 5-10x greater for 45-49 y/o compared to 20-24 y/o
+#' 
+#' @param mmr0 (numeric) initial MMR
+#' @param mmr_dec (numeric) annual percent decline in MMR
+#' @param age (integer) mother age
+#' @param year (integer) current year in simulation
+#' @return (numeric) per birth prob of death
+pmatmort_vec <- function(mmr0,mmr_dec,age,year){
+  
+  # Current MMR
+  mmr = mmr0*(1-mmr_dec)^(year-1990)
+  
+  # Mortality before 1990
+  pmm_l25_l1990 <- mmr0
+  pmm_g25_l1990 <- mmr0+((age-25)/25)*2*mmr0
+  
+  # Mortality after 1990
+  
+  pmm_l25_g1990 <- mmr
+  pmm_g25_g1990 <- mmr+((age-25)/25)*2*mmr
+  
+  # Age categories
+  
+  l25 <- as.integer(age>=0 & age<25)
+  g25 <- as.integer(age>=25)
+  
+  l0 <- as.integer(age<0)
+  
+  # Mortality
+  
+  # after 1990
+  pmatmortl1990 = l25*pmm_l25_l1990 + g25*pmm_g25_l1990 + l0*0
+  
+  # before or during 1990
+  pmatmortg1990 = l25*pmm_l25_g1990 + g25*pmm_g25_g1990 + l0*0
+  
+  if (year>1990) {
+    return(pmatmortg1990)
+  } else {
+    return(pmatmortl1990)
+  }
+}
 
 
 #' Annual probability of death, HIV negative women
@@ -373,17 +418,26 @@ phivneg.death <- function(age,year,mort_s,adultmort,am_cntry,matmort,u5m_c){
 #' @param am_cntry (character) model country for adult mortality
 #' @param u5m_c (data.frame) child mortatily UN Inter-agency Group for Child Mortality 
 #' Estimation (UN IGME) (2012) for one country.
+#' @param prob.birth.all (matrix) annual probability of birth for each age-year. As provided by `prob.birth.ages.years`
+#' @param mmr0 (numeric) initial MMR
+#' @param mmr_dec (numeric) annual percent decline in MMR
 #' @return (matrix) annual probability of death, HIV negative women (years x ages)
-phivneg.death.ages.years <- function(ages,years,mort_s,adultmort,am_cntry,matmort,u5m_c){
+phivneg.death.ages.years <- function(ages,years,mort_s,adultmort,am_cntry,matmort,u5m_c,prob.birth.all,mmr0,mmr_dec){
   
-  prob.death.all <- matrix(NA,length(years),length(ages) )
+  prob.death.all <- matrix(NA,length(years),length(ages))
   row.names(prob.death.all) <- years
   colnames(prob.death.all) <- ages
   #head(prob.death.all)
   for (y in years) {
     for (a in ages) {
+      
       res <- phivneg.death(a,y,mort_s,adultmort,am_cntry,matmort,u5m_c)
-      if (length(res)>0 ){prob.death.all[as.character(y),as.character(a)] <- res}
+      ann.prob.death.after.birth <- prob.birth.all[as.character(y),as.character(a)]*pmatmort_vec(mmr0,mmr_dec,a,y)
+      res2 <- res - ann.prob.death.after.birth
+      
+      if (length(res2)>0 ){
+        prob.death.all[as.character(y),as.character(a)] <- res2
+        }
       else {
         prob.death.all[as.character(y),as.character(a)] <- 0
       }
@@ -1137,34 +1191,35 @@ count.women.age.groups <- function(yr,w){
   
   not_death <- is.na(w[,"death_date"]) | (!is.na(w[,"death_date"]) &  yr<w[,"death_date"])
   
+  women <- w[,"male"]==0
   
   # Ages 15-19
   
-  c15 =   sum( not_death & yr-w[,"dob"]<20 & yr-w[,"dob"]>14)
+  c15 =   sum( not_death & yr-w[,"dob"]<20 & yr-w[,"dob"]>14 & women ) 
   
   # Ages 20-24
   
-  c20 =   sum( not_death & yr-w[,"dob"]<25 & yr-w[,"dob"]>19)
+  c20 =   sum( not_death & yr-w[,"dob"]<25 & yr-w[,"dob"]>19 & women )
   
   # Ages 25-29
   
-  c25 =   sum( not_death & yr-w[,"dob"]<30 & yr-w[,"dob"]>24)
+  c25 =   sum( not_death & yr-w[,"dob"]<30 & yr-w[,"dob"]>24 & women )
   
   # Ages 30-34
   
-  c30 =   sum( not_death & yr-w[,"dob"]<35 & yr-w[,"dob"]>29)
+  c30 =   sum( not_death & yr-w[,"dob"]<35 & yr-w[,"dob"]>29 & women )
   
   # Ages 35-39
   
-  c35 =   sum( not_death & yr-w[,"dob"]<40 & yr-w[,"dob"]>34)
+  c35 =   sum( not_death & yr-w[,"dob"]<40 & yr-w[,"dob"]>34 & women )
   
   # Ages 40-44
   
-  c40 =   sum( not_death & yr-w[,"dob"]<45 & yr-w[,"dob"]>39)
+  c40 =   sum( not_death & yr-w[,"dob"]<45 & yr-w[,"dob"]>39 & women )
   
   # Ages 45-49
   
-  c45 =   sum( not_death & yr-w[,"dob"]<50 & yr-w[,"dob"]>44)
+  c45 =   sum( not_death & yr-w[,"dob"]<50 & yr-w[,"dob"]>44 & women )
   
   # Return vector with counts
   
@@ -1541,8 +1596,10 @@ w.loop.pass <- function(yr,w,ages,years,hivinc_s,prob.birth.all,prob.birth.hiv,b
 #' @param artprobs (matrix)  Annual probabilities for initiating ART given that a woman’s CD4 was below threshold, 
 #' for 2004 to 2010. Probability is 0 before 2004.
 #' @param threshold (numeric) CD4 threshold. Bellow this value one person could start ART.
+#' @param mmr0 (numeric) initial MMR
+#' @param mmr_dec (numeric) annual percent decline in MMR
 #' @return (list) simulation result with elements: w (population matrix), births.age.yr (Matrix of birth counts by age and year), hivbirths.momshiv updated (Matrix of birth counts by HIV status and year).
-run.simulation <- function(yrstart,yrend,ages,years,asfr_s,tfr_s,sexactive15,arts,mort_s,adultmort,am_cntry,matmort,u5m_c,bfeed,growth,initialpop,hivinc_s,artprobs,threshold){
+run.simulation <- function(yrstart,yrend,ages,years,asfr_s,tfr_s,sexactive15,arts,mort_s,adultmort,am_cntry,matmort,u5m_c,bfeed,growth,initialpop,hivinc_s,artprobs,threshold,mmr0,mmr_dec){
   
   # Annual probability of birth as a function of calendar year and mother’s age.
   # HIV negative
@@ -1555,7 +1612,7 @@ run.simulation <- function(yrstart,yrend,ages,years,asfr_s,tfr_s,sexactive15,art
   
   # Annual probability of death, HIV negative women for each age year combination
   
-  prob.death.all <- phivneg.death.ages.years(ages,years,mort_s,adultmort,am_cntry,matmort,u5m_c)
+  prob.death.all <- phivneg.death.ages.years(ages,years,mort_s,adultmort,am_cntry,matmort,u5m_c,prob.death.all,mmr0,mmr_dec)
   
   # Probability of mother to child transmission of HIV. Mother not in ART
   
@@ -1793,7 +1850,7 @@ bigsim <- function(inp,initialpop,years,ages,hivhogan,mort_series,adultmort,worl
   
   arts <- c(0,1)
   
-  simulation.result <- run.simulation(yrstart,yrend,ages,years,asfr_s,tfr_s,sexactive15,arts,mort_s,adultmort,am_cntry,matmort,u5m_c,bfeed,growth,initialpop,hivinc_s,artprobs,threshold)
+  simulation.result <- run.simulation(yrstart,yrend,ages,years,asfr_s,tfr_s,sexactive15,arts,mort_s,adultmort,am_cntry,matmort,u5m_c,bfeed,growth,initialpop,hivinc_s,artprobs,threshold,mmr0,mmr_dec)
   
   # Extract results
   

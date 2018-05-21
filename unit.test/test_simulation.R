@@ -708,8 +708,15 @@ test_count.women.age.groups_01 <- function(){
     
   }) %>% unlist()
   
-  w <- data.frame(dob=dobs,death_date=NA) %>% bind_rows(data.frame(dob=dobs,death_date=1980))
+  w_female <- data.frame(dob=dobs,death_date=NA) %>% bind_rows(data.frame(dob=dobs,death_date=1980))
 
+  w_female <- w_female %>% mutate(male=0)
+  
+  w_male <- data.frame(dob=dobs,death_date=NA) %>% bind_rows(data.frame(dob=dobs,death_date=1980))
+  
+  w_male <- w_male %>% mutate(male=1)
+  
+  w <- bind_rows(w_female,w_male) %>% as.matrix
   
   test <- count.women.age.groups(yr,w)  
   
