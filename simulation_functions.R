@@ -430,16 +430,17 @@ phivneg.death.ages.years <- function(ages,years,mort_s,adultmort,am_cntry,matmor
   #head(prob.death.all)
   for (y in years) {
     for (a in ages) {
-      
+      ych <- as.character(y)
+      ach <- as.character(a)
       res <- phivneg.death(a,y,mort_s,adultmort,am_cntry,matmort,u5m_c)
-      ann.prob.death.after.birth <- prob.birth.all[as.character(y),as.character(a)]*pmatmort_vec(mmr0,mmr_dec,a,y)
+      ann.prob.death.after.birth <- prob.birth.all[ych,ach]*pmatmort_vec(mmr0,mmr_dec,a,y)
       res2 <- res - ann.prob.death.after.birth
       
       if (length(res2)>0 ){
-        prob.death.all[as.character(y),as.character(a)] <- res2
+        prob.death.all[ych,ach] <- res2
         }
       else {
-        prob.death.all[as.character(y),as.character(a)] <- 0
+        prob.death.all[ych,ach] <- 0
       }
     }
   }
@@ -1025,8 +1026,8 @@ initial.DOBs <- function(growth,initialpop,yrstart){
 #' @returm (matrix) empty population matrix with women only
 women.empty.matrix <- function(dobs){
   
-  w <- matrix(NA,length(dobs),19)
-  colnames(w) <- c("id", "momid","dob","age","ceb", "hiv","hiv_date","death_date","hivdeath","cd4","cd4dec","art","art_date","art_e","momage","momhiv","male","cd","dead")
+  w <- matrix(NA,length(dobs),20)
+  colnames(w) <- c("id", "momid","dob","age","ceb", "hiv","hiv_date","death_date","hivdeath","cd4","cd4dec","art","art_date","art_e","momage","momhiv","male","cd","dead","birthlast")
   w[,1] <- c(1:length(dobs))
   w [,"ceb"]=0
   w[,"hiv"]=0
@@ -1040,6 +1041,7 @@ women.empty.matrix <- function(dobs){
   w[,"male"] = 0
   w[,"cd"]=0
   w[,"dead"]=0
+  w[,"birthlast"]=0
   
   w
   
@@ -1271,10 +1273,12 @@ new.babies <- function(yr,w,prob.birth.all,prob.birth.hiv){
   
   # Combine the three vectors above to get the probability of birth for each woman
   
-  prob.birth.thisyear.adj <- (1-w[,"male"])* # If male, prob 0
-    (prob.birth.thisyear*(1-w[,"hiv"]) + # Woman HIV negative
-       prob.birth.thisyear.hiv.art*w[,'art'] + # Woman HIV positive in ART
-       prob.birth.thisyear.hiv.noart*(1-w[,'art'])*w[,'hiv']) # Woman HIV positive not in ART
+  prob.birth.thisyear.adj <- (1-w[,"male"])*# If male, prob 0
+    (prob.birth.thisyear*(1-w[,"hiv"])*is.na(w[,"death_date"]) + # Woman HIV negative
+       (1-w[,"male"])*prob.birth.thisyear.hiv.art*w[,'art']*is.na(w[,"death_date"]) + # Woman HIV positive in ART
+       (1-w[,"male"])*prob.birth.thisyear.hiv.noart*(1-w[,'art'])*w[,'hiv'])*is.na(w[,"death_date"])  # Woman HIV positive not in ART
+    
+  prob.birth.thisyear.adj <- prob.birth.thisyear.adj-prob.birth.thisyear.adj*(w[,"birthlast"])
   
   # Randomly create vector of TRUE (birth) or FALSE (no birth), according to the probability of birth of each
   # individual.
@@ -1315,6 +1319,7 @@ next.babies <- function(yr,w,newbaby){
   nextbabies[,"age"] <- 0
   nextbabies[,"ceb"] <- 0
   nextbabies[,"cd"] <- 0
+  nextbabies[,"birthlast"] <-0
   
   # Determine randomly if is male/female
   nextbabies[,"male"] <- as.numeric(runif(nrow(nextbabies))<=102.5/202.5)  
@@ -1323,7 +1328,7 @@ next.babies <- function(yr,w,newbaby){
   
 }
 
-#' Updates ceb when individuals have a baby
+#' Updates ceb when individuals have a baby and update last births
 #' 
 #' @param w (matrix) Population matrix
 #' @param newbaby (logical) Vector of length=nrow(w). Each element determines whether a woman gives birth 
@@ -1332,6 +1337,12 @@ next.babies <- function(yr,w,newbaby){
 update.women.ceb <- function(w,newbaby){
   
   w[newbaby,"ceb"] <- w[newbaby,"ceb"]+1
+  
+  # Reset last birth
+  w[,"birthlast"] <- 0 
+  
+  # Update last births
+  w[newbaby,"birthlast"] <- 1 
   
   w
 }
@@ -1424,7 +1435,7 @@ mortality <- function(yr,w,prob.death.all){
 HIV.infection <- function(yr,w,prob.hiv.vec){
   
   # Probability of getting infected this year for each age category. 0 if already infected
-  prob.hiv.thisyear <- prob.hiv.vec[as.character(w[,"age"]),as.character(yr)]*(1-w[,"hiv"])
+  prob.hiv.thisyear <- prob.hiv.vec[as.character(w[,"age"]),as.character(yr)]*(1-w[,"hiv"])*is.na(w[,"death_date"])
   
   # Determine randomly who gets infected.
   gothiv <- runif(nrow(w))<prob.hiv.thisyear
