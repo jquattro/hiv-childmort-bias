@@ -10,6 +10,7 @@ if(!dir.exists("./results/regdata")){
   dir.create("./results/regdata",recursive = TRUE)
 }
 
+require(dplyr)
 
 ##### SIMULATION #####
 
@@ -46,7 +47,7 @@ art_col <- c("zero","Botswana","Cameroon","Malawi","Bot_dub")
 growth <-  c(0.03)
 yrend <- 2010
 # Starting year
-yrstart <- 1946
+yrstart <- 1906
 
 # CD4 threshold
 
@@ -76,16 +77,16 @@ psets_to_process <- setdiff(1:nrow(inputs),psets_already)
  
 #Set size of initial population
  
-ip<-10
+ip<- 7500
 
-years <- c(1946:2010)
-ages <- c(-100:120)
+years <- c(1906:2010)
+ages <- c(0:120)
 
          
 # Run simulation for each set of parameters
 
 for(pset in psets_to_process){
-  
+  # pset <- psets_to_process[1]
   inp <- inputs[pset,]
   
   
@@ -94,8 +95,7 @@ for(pset in psets_to_process){
   
   # Generate population
   set.seed(1000)
-  
-  results <- bigsim(inp,initialpop=ip,years,ages,hivhogan,mort_series,adultmort,worldfert,tfr_series,art_series,u5m_edit,matmort)
+  profvis(results <- bigsim(inp,initialpop=ip,years,ages,hivhogan,mort_series,adultmort,worldfert,tfr_series,art_series,u5m_edit,matmort))
   
   
   ##### INDIRECT ESTIMATES #####
@@ -183,5 +183,7 @@ for(filename in sort(list.files("./results/regdata",pattern = "regdata.\\d+",ful
     
   }, error=function(e){cat("ERROR :",conditionMessage(e), "\n")})
 }
+
+nbd2k <- nbd2k[2:length(nbd2k[,1]),]
 
 save(nbd2k,file="./results/regdata_all.Rdata")

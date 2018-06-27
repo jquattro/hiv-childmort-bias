@@ -78,20 +78,26 @@ prob.birth <- function(age,yr,asfr_s,tfr_s){
 #' @return (matrix) annual probability of birth for each age-year
 prob.birth.ages.years <- function(ages,years,asfr_s,tfr_s){
   
+  ages_as_character <- as.character(ages)
+  years_as_character <- as.character(years)
   # Create an empty matrix
-  prob.birth.all <- matrix(NA,length(years),length(ages) )
-  row.names(prob.birth.all) <- years
-  colnames(prob.birth.all) <- ages
+  prob.birth.all <- matrix(NA,length(years_as_character),length(ages_as_character) )
+  row.names(prob.birth.all) <- years_as_character
+  colnames(prob.birth.all) <- ages_as_character
+  
+  
   
   # Fill the matrix
-  for (y in years) { # For each year
-    for (a in ages) { # For eacj age
+  for (i in 1:length(years)) { # For each year
+    y <- years[i]
+    for (j in 1:length(ages)) { # For eacj age
+      a <- ages[j]
       res <- prob.birth(a,y,asfr_s,tfr_s) # Compute annual probability of birth
       
       # set probability to zero when the result is NULL (women younger than 15 years and older than 49 years).
-      if (length(res)>0 ){prob.birth.all[as.character(y),as.character(a)] <- res
+      if (length(res)>0 ){prob.birth.all[years_as_character[i],ages_as_character[j]] <- res
       } else {
-        prob.birth.all[as.character(y),as.character(a)] <- 0
+        prob.birth.all[years_as_character[i],ages_as_character[j]] <- 0
       }
     }
   }
@@ -360,43 +366,43 @@ phivneg.death <- function(age,year,mort_s,adultmort,am_cntry,matmort,u5m_c){
   if(age>14 & age<20){
     pd5yr = adultmort$q.x.n.[adultmort$age==15 & adultmort$E.0.==e0]
     pd1yr = 1-(1-pd5yr)^(1/5)
-    pd1yr = pd1yr - matmort[,paste("X",year,sep="")][matmort$Country==am_cntry & matmort$Agegroup==1]
+    #pd1yr = pd1yr - matmort[,paste("X",year,sep="")][matmort$Country==am_cntry & matmort$Agegroup==1]
     return(pd1yr)
   }
   if(age>19 & age<25){
     pd5yr = adultmort$q.x.n.[adultmort$age==20 & adultmort$E.0.==e0]
     pd1yr = 1-(1-pd5yr)^(1/5)
-    pd1yr = pd1yr - matmort[,paste("X",year,sep="")][matmort$Country==am_cntry & matmort$Agegroup==2]
+    #pd1yr = pd1yr - matmort[,paste("X",year,sep="")][matmort$Country==am_cntry & matmort$Agegroup==2]
     return(pd1yr)
   }
   if(age>24 & age<30){
     pd5yr = adultmort$q.x.n.[adultmort$age==25 & adultmort$E.0.==e0 ]
     pd1yr = 1-(1-pd5yr)^(1/5)
-    pd1yr = pd1yr - matmort[,paste("X",year,sep="")][matmort$Country==am_cntry & matmort$Agegroup==3]
+    #pd1yr = pd1yr - matmort[,paste("X",year,sep="")][matmort$Country==am_cntry & matmort$Agegroup==3]
     return(pd1yr)
   }
   if(age>29 & age<35){
     pd5yr = adultmort$q.x.n.[adultmort$age==30 & adultmort$E.0.==e0 ]
     pd1yr = 1-(1-pd5yr)^(1/5)
-    pd1yr = pd1yr - matmort[,paste("X",year,sep="")][matmort$Country==am_cntry & matmort$Agegroup==4]
+    #pd1yr = pd1yr - matmort[,paste("X",year,sep="")][matmort$Country==am_cntry & matmort$Agegroup==4]
     return(pd1yr)
   }
   if(age>34 & age<40){
     pd5yr = adultmort$q.x.n.[adultmort$age==35 & adultmort$E.0.==e0]
     pd1yr = 1-(1-pd5yr)^(1/5)
-    pd1yr = pd1yr - matmort[,paste("X",year,sep="")][matmort$Country==am_cntry & matmort$Agegroup==5]
+    #pd1yr = pd1yr - matmort[,paste("X",year,sep="")][matmort$Country==am_cntry & matmort$Agegroup==5]
     return(pd1yr)
   }
   if(age>39 & age<45){
     pd5yr = adultmort$q.x.n.[adultmort$age==40 & adultmort$E.0.==e0 ]
     pd1yr = 1-(1-pd5yr)^(1/5)
-    pd1yr = pd1yr - matmort[,paste("X",year,sep="")][matmort$Country==am_cntry & matmort$Agegroup==6]
+    #pd1yr = pd1yr - matmort[,paste("X",year,sep="")][matmort$Country==am_cntry & matmort$Agegroup==6]
     return(pd1yr)
   }
   if(age>44 & age<50){
     pd5yr = adultmort$q.x.n.[adultmort$age==45 & adultmort$E.0.==e0]
     pd1yr = 1-(1-pd5yr)^(1/5)
-    pd1yr = pd1yr - matmort[,paste("X",year,sep="")][matmort$Country==am_cntry & matmort$Agegroup==7]
+    #pd1yr = pd1yr - matmort[,paste("X",year,sep="")][matmort$Country==am_cntry & matmort$Agegroup==7]
     return(pd1yr)  
   }
   
@@ -487,6 +493,20 @@ weib.tp <- function(t,scale,shape){
   return(tp)
 }
 
+shape=1.6
+t.steps <- 1:100
+weib.tp.hvl.cd450.yg1 <- weib.tp(t.steps,13.7,shape)
+weib.tp.hvl.cd4100.yg1 <- weib.tp(t.steps,16,shape)
+weib.tp.hvl.cd4200.yg1 <- weib.tp(t.steps,16.9,shape)
+weib.tp.hvl.cd4350.yg1 <- weib.tp(t.steps,23.3,shape)
+weib.tp.hvl.cd4g350.yg1 <- weib.tp(t.steps,33.3,shape)
+
+weib.tp.lvl.cd450.yg1 <- weib.tp(t.steps,24.4,shape)
+weib.tp.lvl.cd4100.yg1 <- weib.tp(t.steps,28.4,shape)
+weib.tp.lvl.cd4200.yg1 <- weib.tp(t.steps,30.1,shape)
+weib.tp.lvl.cd4350.yg1 <- weib.tp(t.steps,41.4,shape)
+weib.tp.lvl.cd4g350.yg1 <- weib.tp(t.steps,59.1,shape)
+
 #' Probability of death for HIV pos adults on ART
 #' 
 #' HIV-positive women on ART faced an annual probability of death that 
@@ -514,7 +534,7 @@ art.surv.vec <- function(year,cd4,art_date){
   lvl <- 1 - hvl
   
   # Time since ART initiation
-  t = year-art_date
+  t = as.integer(year-art_date)
   
   # Annual probability of death is a function of CD4 count at ART initiation, 
   # presence or ausence of symptoms at baseline and time since initiation
@@ -540,7 +560,8 @@ art.surv.vec <- function(year,cd4,art_date){
   
   # Use Weibull distribution to compute probability after the first year
   
-  hvl.cd450.yg1 <- weib.tp(t,13.7,shape)
+  
+  hvl.cd450.yg1 <- weib.tp.hvl.cd450.yg1[t]
   
   # select only cases with the right amount of CD4 and more than one year since ART initiation 
   
@@ -559,7 +580,7 @@ art.surv.vec <- function(year,cd4,art_date){
   cd4100.y1.select <- cd4100.select & y1
   
   hvl.cd4100.y1.select <- hvl*cd4100.y1.select #ifelse(cd4>=50 & cd4<100 & t==1,1,0)
-  hvl.cd4100.yg1 <- weib.tp(t,16,shape)
+  hvl.cd4100.yg1 <- weib.tp.hvl.cd4100.yg1[t]
   cd4100.yg1.select <- cd4100.select & yg1
   hvl.cd4100.yg1.select <- hvl*cd4100.yg1.select#ifelse(cd4>=50 & cd4<100 & t>1,1,0)
   
@@ -574,7 +595,7 @@ art.surv.vec <- function(year,cd4,art_date){
   hvl.cd4200.y1.select <- hvl*cd4200.y1.select
   
   #hvl.cd4200.y1.select <- hvl*ifelse(cd4>=100 & cd4<200 & t==1,1,0)
-  hvl.cd4200.yg1 <- weib.tp(t,16.9,shape)
+  hvl.cd4200.yg1 <- weib.tp.hvl.cd4200.yg1[t]
   
   cd4200.yg1.select <- cd4200.select & yg1
   hvl.cd4200.yg1.select <- hvl*cd4200.yg1.select
@@ -592,7 +613,7 @@ art.surv.vec <- function(year,cd4,art_date){
   hvl.cd4350.y1.select <- hvl*cd4350.y1.select
   
   #hvl.cd4350.y1.select <- hvl*ifelse(cd4>=200 & cd4<350 & t==1,1,0)
-  hvl.cd4350.yg1 <- weib.tp(t,23.3,shape)
+  hvl.cd4350.yg1 <- weib.tp.hvl.cd4350.yg1[t]
   
   cd4350.yg1.select <- cd4350.select & yg1
   hvl.cd4350.yg1.select <- hvl*cd4350.yg1.select
@@ -611,7 +632,7 @@ art.surv.vec <- function(year,cd4,art_date){
   
   
   #hvl.cd4g350.y1.select <- hvl*ifelse(cd4>=350 & t==1,1,0)
-  hvl.cd4g350.yg1 <- weib.tp(t,33.3,shape)
+  hvl.cd4g350.yg1 <- weib.tp.hvl.cd4g350.yg1[t]
   
   cd4g350.yg1.select <- cd4g350.select & yg1
   hvl.cd4g350.yg1.select <- hvl*cd4g350.yg1.select
@@ -630,7 +651,7 @@ art.surv.vec <- function(year,cd4,art_date){
   lvl.cd450.y1.select <- lvl*cd450.y1.select
   
   #lvl.cd450.y1.select <- lvl*ifelse(cd4<50 & t==1,1,0)
-  lvl.cd450.yg1 <- weib.tp(t,24.4,shape)
+  lvl.cd450.yg1 <- weib.tp.lvl.cd450.yg1[t]
   
   lvl.cd450.yg1.select <- lvl*cd450.yg1.select
   
@@ -643,7 +664,7 @@ art.surv.vec <- function(year,cd4,art_date){
   lvl.cd4100.y1.select <- lvl*cd4100.y1.select
   
   #lvl.cd4100.y1.select <- lvl*ifelse(cd4>=50 & cd4<100 & t==1,1,0)
-  lvl.cd4100.yg1 <- weib.tp(t,28.4,shape)
+  lvl.cd4100.yg1 <- weib.tp.lvl.cd4100.yg1[t]
   
   lvl.cd4100.yg1.select <- lvl*cd4100.yg1.select
   
@@ -656,7 +677,7 @@ art.surv.vec <- function(year,cd4,art_date){
   lvl.cd4200.y1.select <- lvl*cd4200.y1.select
   
   #lvl.cd4200.y1.select <- lvl*ifelse(cd4>=100 & cd4<200 & t==1,1,0)
-  lvl.cd4200.yg1 <- weib.tp(t,30.1,shape)
+  lvl.cd4200.yg1 <- weib.tp.lvl.cd4200.yg1[t]
   
   lvl.cd4200.yg1.select <- lvl*cd4200.yg1.select
   
@@ -669,7 +690,7 @@ art.surv.vec <- function(year,cd4,art_date){
   lvl.cd4350.y1.select <- lvl*cd4350.y1.select
   
   #lvl.cd4350.y1.select <- lvl*ifelse(cd4>=200 & cd4<350 & t==1,1,0)
-  lvl.cd4350.yg1 <- weib.tp(t,41.4,shape)
+  lvl.cd4350.yg1 <- weib.tp.lvl.cd4350.yg1[t]
   
   lvl.cd4350.yg1.select <- lvl*cd4350.yg1.select
   
@@ -682,7 +703,7 @@ art.surv.vec <- function(year,cd4,art_date){
   lvl.cd4g350.y1.select <- lvl*cd4g350.y1.select
   
   #lvl.cd4g350.y1.select <- lvl*ifelse(cd4>=350 & t==1,1,0)
-  lvl.cd4g350.yg1 <- weib.tp(t,59.1,shape)
+  lvl.cd4g350.yg1 <- weib.tp.lvl.cd4g350.yg1[t]
   
   lvl.cd4g350.yg1.select <- lvl*cd4g350.yg1.select
   
@@ -1004,16 +1025,16 @@ initial.DOBs <- function(growth,initialpop,yrstart){
   
   # Compute total population for each year
   
-  ratios <- (1+growth) ^ (0:49)
-  
-  population = ratios*initialpop
-  
-  # Compute DOB for each year, starting at 1897
-  
-  
-  dobs <- rep((yrstart-50+1):yrstart,times=as.integer(population))
-  
-  
+  # ratios <- (1+growth) ^ (0:49)
+  # 
+  # population = ratios*initialpop
+  # 
+  # # Compute DOB for each year, starting at 1897
+  # 
+  # 
+  # dobs <- rep((yrstart-50+1):yrstart,times=as.integer(population))
+  # 
+  dobs = rep(yrstart-15, initialpop)
   dobs  
   
 }
@@ -1256,11 +1277,12 @@ update.women.age <- function(yr,w){
 #' @param prob.birth.all (matrix) Annual probability of birth as a function of calendar 
 #' year and mother’s age. HIV negative. As given by `prob.birth.ages.years`.
 #' @param prob.birth.hiv (matrix) Reduction in prob of giving birth due to HIV for each art, age combination. As provided by `prob.birth.hiv`
+#' @param ages.as.char (character) Same as w[,"age"] but as character. For performance.
 #' @return (logical) Vector of length=nrow(w). Each element determines whether a woman gives birth 
 #' that year (TRUE) or not (FALSE).
-new.babies <- function(yr,w,prob.birth.all,prob.birth.hiv){
+new.babies <- function(yr,w,prob.birth.all,prob.birth.hiv,ages.as.char){
   
-  ages.as.char <- as.character(w[,"age"])
+  #ages.as.char <- w[,"age"]
   
   # Get probability of birth this year for each woman in w. HIV negative
   prob.birth.thisyear <- prob.birth.all[as.character(yr),ages.as.char]
@@ -1378,13 +1400,14 @@ vertical.transmision.HIV <- function(prob.vt.noart,prob.vt.art,nextbabies){
 #' @param w (matrix) population matrix
 #' @param prob.death.all (matrix) Probability of dead being HIV negative for each age and year. 
 #' As provided by `phivneg.death.ages.years`.
+#' @param ages.as.char (character) Same as w[,"age"] but as character. For performance.
 #' @return (matrix) population matrix
-mortality <- function(yr,w,prob.death.all){
+mortality <- function(yr,w,prob.death.all,ages.as.char){
   
   # Get probability of death for this year according to age
   
   # HIV negative
-  prob.death.thisyear <- prob.death.all[as.character(yr),as.character(w[,"age"])]
+  prob.death.thisyear <- prob.death.all[as.character(yr),ages.as.char]
   
   # HIV positive and in ART
   prob.death.thisyear.hiv.art <- art.surv.vec(yr,w[,"cd4"],w[,"art_date"])
@@ -1431,11 +1454,12 @@ mortality <- function(yr,w,prob.death.all){
 #' @param w (matrix) population matrix
 #' @param prob.hiv.vec (matrix) Probability of getting infected for each age and year. 
 #' As provided by `prob.hiv.ages.years`.
+#' @param ages.as.char (character) Same as w[,"age"] but as character. For performance.
 #' @return (matrix) population matrix
-HIV.infection <- function(yr,w,prob.hiv.vec){
+HIV.infection <- function(yr,w,prob.hiv.vec,ages.as.char){
   
   # Probability of getting infected this year for each age category. 0 if already infected
-  prob.hiv.thisyear <- prob.hiv.vec[as.character(w[,"age"]),as.character(yr)]*(1-w[,"hiv"])*is.na(w[,"death_date"])
+  prob.hiv.thisyear <- prob.hiv.vec[ages.as.char,as.character(yr)]*(1-w[,"hiv"])*is.na(w[,"death_date"])
   
   # Determine randomly who gets infected.
   gothiv <- runif(nrow(w))<prob.hiv.thisyear
@@ -1534,6 +1558,13 @@ ART.initiation <- function(yr,w,artprobs,threshold){
 #' @return (list) with elements: w, births.age.yr, hivbirths.momshiv updated.
 w.loop.pass <- function(yr,w,ages,years,hivinc_s,prob.birth.all,prob.birth.hiv,births.age.yr,hivbirths.momshiv,prob.vt.noart,prob.vt.art,prob.death.all,artprobs,threshold){
   print(paste(Sys.time(),":",yr))
+  
+  # split in men and women
+  
+  males <- w[w[,"male"]==1,]
+  
+  w <- w[w[,"male"]==0,]
+  
   # count women by age group to normalize hiv incidence
   counts <- count.women.age.groups(yr,w)
   
@@ -1542,9 +1573,15 @@ w.loop.pass <- function(yr,w,ages,years,hivinc_s,prob.birth.all,prob.birth.hiv,b
   
   w <- update.women.age(yr,w)
   
+  males <- update.women.age(yr,males)
+  
+  # For performance, convert ages to character just once.
+  
+  ages.as.char <- as.character(w[,"age"])
+  
   # Fertility  
   
-  newbaby <- new.babies(yr,w,prob.birth.all,prob.birth.hiv)
+  newbaby <- new.babies(yr,w,prob.birth.all,prob.birth.hiv,ages.as.char)
   
   nextbabies <- next.babies(yr,w,newbaby)
   
@@ -1563,15 +1600,15 @@ w.loop.pass <- function(yr,w,ages,years,hivinc_s,prob.birth.all,prob.birth.hiv,b
   # HIV positive births tracker for realized VT
   hivbirths.momshiv <- update.birth.counts.by.hiv.status(hivbirths.momshiv,nextbabies,yr)
   
-  w <- rbind(w,nextbabies)
+  w <- rbind(w,nextbabies,males)
   
   # Mortality
   
-  w<- mortality(yr,w,prob.death.all)
+  w<- mortality(yr,w,prob.death.all,ages.as.char)
   
   # HIV infection
   
-  w <- HIV.infection(yr,w,prob.hiv.vec)
+  w <- HIV.infection(yr,w,prob.hiv.vec,ages.as.char)
   
   
   # ART intiation
@@ -1651,6 +1688,8 @@ run.simulation <- function(yrstart,yrend,ages,years,asfr_s,tfr_s,sexactive15,art
   
   # Run simulation
   
+  w_dead <- list()
+  
   for (yr in yrstart:yrend) {
     
     # Run simulation pass
@@ -1664,8 +1703,23 @@ run.simulation <- function(yrstart,yrend,ages,years,asfr_s,tfr_s,sexactive15,art
     
     hivbirths.momshiv <- result$hivbirths.momshiv
     
+    # Remove dead people and store them
+    
+    w_d <- w[!is.na(w[,"death_date"]),]
+    
+    w_dead <- c(w_dead,list(w_d))
+    
+    w <- w[is.na(w[,"death_date"]),]
+    
+    
+    
   }
   
+  # Put dead people back into the matrix
+  
+  w_dead <- do.call(rbind,w_dead)
+  
+  w <- rbind(w,w_dead)
   
   list(w=w,births.age.yr=births.age.yr,hivbirths.momshiv=hivbirths.momshiv)
   
@@ -1809,9 +1863,13 @@ children.dead.per.mother <- function(w){
   
   names(cd) <- c("id","cd2")
   
+  cd[,"id"] <- as.integer(as.character(cd[,"id"]))
+  
   # Merge with women matrix
   
-  w <- as.matrix(merge(w,cd,by="id",all.x=TRUE))
+  w <- as.matrix(left_join(data.frame(w),cd,by="id"))
+  
+  # w <- as.matrix(merge(w,cd,by="id",all.x=TRUE))
   
   w[,"cd"] <- w[,"cd2"]
   
