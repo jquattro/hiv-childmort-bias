@@ -1377,8 +1377,9 @@ update.women.ceb <- function(w,newbaby){
 #' @param prob.vt.noart (numeric) Probability of mother to child transmission of HIV when mother is not in ART
 #' @param prob.vt.art (numeric) Probability of mother to child transmission of HIV when mother is in ART
 #' @param nextbabies (matrix) population matrix of newborns, like the one provided by `next.babies`
+#' @param yr (integer) current simulation year.
 #' @return (matrix) updated mopulation matrix of newborns
-vertical.transmision.HIV <- function(prob.vt.noart,prob.vt.art,nextbabies){
+vertical.transmision.HIV <- function(prob.vt.noart,prob.vt.art,nextbabies,yr){
   
   # We compute two vectors: one with prov.vt.noart for individuals with HIV and not in art (and 0 otherwise)
   # and another one with prov.vt.art for individuals in art (and 0 otherwise). When we sum both vectors we get
@@ -1389,6 +1390,9 @@ vertical.transmision.HIV <- function(prob.vt.noart,prob.vt.art,nextbabies){
   # Determine randomly if each baby gets infected
   hivbaby <- runif(nrow(nextbabies))<prob.vt.thisyear.adj
   nextbabies[,"hiv"] <- hivbaby
+  
+  # Set HIV year
+  nextbabies[hivbaby,"hiv_date"] <- yr
   
   nextbabies
 }
@@ -1593,7 +1597,7 @@ w.loop.pass <- function(yr,w,ages,years,hivinc_s,prob.birth.all,prob.birth.hiv,b
   births.age.yr <- update.birth.counts.by.age(births.age.yr,nextbabies,yr,counts["c15"],counts["c20"],counts["c25"],counts["c30"],counts["c35"],counts["c40"],counts["c45"])
   
   # Vertical transmission of HIV
-  nextbabies <- vertical.transmision.HIV(prob.vt.noart,prob.vt.art,nextbabies)
+  nextbabies <- vertical.transmision.HIV(prob.vt.noart,prob.vt.art,nextbabies,yr)
   
   
   # births to HIV positive women
