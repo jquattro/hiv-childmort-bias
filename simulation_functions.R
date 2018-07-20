@@ -1416,18 +1416,25 @@ mortality <- function(yr,w,prob.death.all,ages.as.char){
   # HIV positive and in ART
   prob.death.thisyear.hiv.art <- art.surv.vec(yr,w[,"cd4"],w[,"art_date"])
   
-  # HIV positive and not in ART. aidsmort is defined as a constant next to `phiv.death`
-  prob.death.thisyear.hiv.noart <- aidsmort[1+yr-w[,"hiv_date"]]
+  
+  # HIV positive and not in ART. aidsmort is defined as a constant next to `phiv.death`. Infected at age 15 or higher
+  prob.death.thisyear.hiv.noart <- aidsmort[1+yr-w[,"hiv_date"]]*((w[,"age"]-(yr-w[,"hiv_date"]))>=15)
+  
+  # Babies infected at birth and 6 yo or younger
+  
+  prob.death.babies.infected <- baby.death.hiv(w[,"age"])*(yr-w[,"hiv_date"]==w[,"age"])*(w[,"age"]<=6)
   
   # Missing value of probability means 0 probability
   prob.death.thisyear.hiv.art[is.na(prob.death.thisyear.hiv.art)] <- 0
   prob.death.thisyear.hiv.noart[is.na(prob.death.thisyear.hiv.noart)] <- 0
+  prob.death.babies.infected[is.na(prob.death.babies.infected)] <- 0
   
   # Combine the three vectors above to get the probability for each inidividual
   prob.death.thisyear.adj <- prob.death.thisyear*(1-w[,"hiv"]) + # HIV negative
     prob.death.thisyear.hiv.art*w[,'art'] + # HIV positive and in ART
-    prob.death.thisyear.hiv.noart*(1-w[,'art'])*w[,'hiv'] # HIV positive and not in ART
-  
+    prob.death.thisyear.hiv.noart*(1-w[,'art'])*w[,'hiv']+ # HIV positive and not in ART
+    prob.death.babies.infected*w[,'hiv'] # babies infected at birth
+    
   # Determine randomly who died this year...
   died <- runif(nrow(w))<prob.death.thisyear.adj
   
