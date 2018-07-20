@@ -1055,7 +1055,7 @@ women.empty.matrix <- function(dobs){
   w[,"hiv_date"]=NA
   w[,"hivdeath"]=0 
   w[,"art"]=0 
-  w[,"art_date"]=0
+  w[,"art_date"]=NA
   w[,"art_e"]=NA
   w[,"dob"] = dobs
   w[,"momid"] = NA
@@ -1210,7 +1210,7 @@ count.women.age.groups <- function(yr,w){
   c40=0
   c45=0
   
-  # For each age category, count hoy many people are not dead in that age category 
+  # For each age category, count how many people are not dead in that age category 
   
   not_death <- is.na(w[,"death_date"]) | (!is.na(w[,"death_date"]) &  yr<w[,"death_date"])
   
@@ -1529,7 +1529,7 @@ ART.initiation <- function(yr,w,artprobs,threshold){
   
   noart = is.na(w[,"art_e"]) & w[,"hiv"]
   
-  # Which individuals not inr ART, are below the threshold, and could start ART
+  # Which individuals not on ART, are below the threshold, and could start ART
   w[noart,"art_e"] = ifelse(w[noart,"cd4"]<threshold,yr,NA)
   couldgetart = !is.na(w[,"art_e"]) & !w[,"art"]
   
@@ -1777,14 +1777,17 @@ realized.hiv.art <- function(w,start_year,end_year){
     hpos6 = subset(hpos5,hpos5[,"hiv_date"]==i)
     hivnew[i] = nrow(hpos6)
     
-    # Women eligible for ART but not on ART
-    num_elig1a = subset(hpos5, hpos5[,"art_e"]>0 & hpos5[,"art_e"]<=i & hpos5[,"art_date"]>i)
-    num_elig1b = subset(hpos5, hpos5[,"art_e"]>0 & hpos5[,"art_e"]<=i & hpos5[,"art_date"]==0)
+    # Women alive in year i eligible for ART but not on ART
+      # Eligible and not on ART in year i, but started after year i
+      num_elig1a = subset(hpos5, hpos5[,"art_e"]>0 & hpos5[,"art_e"]<=i & hpos5[,"art_date"]>i & !is.na(hpos5[,"death_date"]))
+      # Eligible and not on ART in year i, never started
+      num_elig1b = subset(hpos5, hpos5[,"art_e"]>0 & hpos5[,"art_e"]<=i & is.na(hpos5[,"art_date"]) & !is.na(hpos5[,"death_date"]))
+    
     num_elig2 = rbind(num_elig1a,num_elig1b) 
     num_elig[i] = nrow(num_elig2)
     
-    # Women on ART
-    num_art1 = subset(hpos5, hpos5[,"art_date"]<=i & hpos5[,"art_date"]>0)
+    # Women alive in year i on ART
+    num_art1 = subset(hpos5, hpos5[,"art_date"]<=i & !is.na(hpos5[,"art_date"]))
     num_art[i] = nrow(num_art1)
     
     # ART coverage in year i
