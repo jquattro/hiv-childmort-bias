@@ -1301,7 +1301,7 @@ new.babies <- function(yr,w,prob.birth.all,prob.birth.hiv,ages.as.char){
        (1-w[,"male"])*prob.birth.thisyear.hiv.art*w[,'art']*is.na(w[,"death_date"]) + # Woman HIV positive in ART
        (1-w[,"male"])*prob.birth.thisyear.hiv.noart*(1-w[,'art'])*w[,'hiv'])*is.na(w[,"death_date"])  # Woman HIV positive not in ART
     
-  prob.birth.thisyear.adj <- prob.birth.thisyear.adj-prob.birth.thisyear.adj*(w[,"birthlast"])
+#  prob.birth.thisyear.adj <- prob.birth.thisyear.adj-prob.birth.thisyear.adj*(w[,"birthlast"])
   
   # Randomly create vector of TRUE (birth) or FALSE (no birth), according to the probability of birth of each
   # individual.
