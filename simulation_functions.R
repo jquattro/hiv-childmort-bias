@@ -804,12 +804,13 @@ baby.death.hiv <- function(ages){
   # Assign mortality to each age. For ages <0 and greater than 4 prob is 0
   for (a in ages) {
     if(a<0){baby.death.hiv[as.character(a)]=0}
-    if(a>4){baby.death.hiv[as.character(a)]=0}
+    if(a>6){baby.death.hiv[as.character(a)]=0}
     if(a==0){baby.death.hiv[as.character(a)]=hivchild_mort[1]}   
     if(a==1){baby.death.hiv[as.character(a)]=hivchild_mort[2]}   
     if(a==2){baby.death.hiv[as.character(a)]=hivchild_mort[3]}   
     if(a==3){baby.death.hiv[as.character(a)]=hivchild_mort[4]}   
-    if(a==4){baby.death.hiv[as.character(a)]=hivchild_mort[5]}   
+    if(a>=4 & a <=6){baby.death.hiv[as.character(a)]=hivchild_mort[5]}   
+    
   }
   
   baby.death.hiv
