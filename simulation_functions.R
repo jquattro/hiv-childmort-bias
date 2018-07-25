@@ -787,7 +787,7 @@ baby.death.nohiv <- function(ages,years,u5m_c){
 #' Using cumulative child mortality due to AIDS from Walker, Hill, and Zhao (2012).
 #' Probability at ages less than 0 and greater than 4 is zero.
 #' 
-#' @param ages (character) vector of children ages
+#' @param ages (integer) vector of children ages
 #' @return (numeric) Probability of death for HIV positive children
 baby.death.hiv <- function(ages){
   
@@ -795,28 +795,18 @@ baby.death.hiv <- function(ages){
   
   # cumulative child mortality due to AIDS from Walker, Hill, and Zhao (2012)
   
-  hivchild_mort = c("0"=0.376,  "1"=0.2019,	"2"=0.1184,	"3"=0.07061,	"4"=0.0588, "5"=0.0588,"6"=0.0588)  
+  hivchild_mort = c(0.376,  0.2019,	0.1184,	0.07061,	0.0588, 0.0588,0.0588)  
   
-  # Empty vector
+  # Get probabilities
   
-  baby.death.hiv <- as.vector(hivchild_mort[ages])#vector(,length(ages) )
+  baby.death.hiv <- hivchild_mort[ages+1]
+  
+  # Other ages get 0 prob
   
   baby.death.hiv[is.na(baby.death.hiv)] <- 0
   
-  # names(baby.death.hiv) <- ages
-  # 
-  # # Assign mortality to each age. For ages <0 and greater than 4 prob is 0
-  # for (a in ages) {
-  #   if(a<0){baby.death.hiv[a]=0}
-  #   if(a>6){baby.death.hiv[a]=0}
-  #   if(a==0){baby.death.hiv[as.character(a)]=hivchild_mort[1]}   
-  #   if(a==1){baby.death.hiv[as.character(a)]=hivchild_mort[2]}   
-  #   if(a==2){baby.death.hiv[as.character(a)]=hivchild_mort[3]}   
-  #   if(a==3){baby.death.hiv[as.character(a)]=hivchild_mort[4]}   
-  #   if(a>=4 & a <=6){baby.death.hiv[as.character(a)]=hivchild_mort[5]}   
-  #   
-  # }
-  # 
+ 
+ 
   baby.death.hiv
   
 }
@@ -1427,7 +1417,7 @@ mortality <- function(yr,w,prob.death.all,ages.as.char){
   
   # Babies infected at birth and 6 yo or younger
   
-  prob.death.babies.infected <- baby.death.hiv(ages.as.char)*(yr-w[,"hiv_date"]==w[,"age"])*(w[,"age"]<=6)
+  prob.death.babies.infected <- baby.death.hiv(w[,"age"])*(yr-w[,"hiv_date"]==w[,"age"])*(w[,"age"]<=6)
   
   # Missing value of probability means 0 probability
   prob.death.thisyear.hiv.art[is.na(prob.death.thisyear.hiv.art)] <- 0

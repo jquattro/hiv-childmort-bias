@@ -4,7 +4,7 @@ test_baby.death.hiv_01 <- function(){
   
   # Define input
   
-  ages <- c("2","3","5","0","10")
+  ages <- c("2","3","5","0","10") %>% as.integer
   
   # Define what we expect to get with the input
   
