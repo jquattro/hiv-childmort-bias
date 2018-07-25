@@ -14,6 +14,7 @@ ind_est <- function(momkidsclean){
   surv_momsfull$endage <- survey-surv_momsfull$dob
   surv_momsfull <- surv_momsfull[surv_momsfull$endage<50,]
   surv_momsfull <- surv_momsfull[surv_momsfull$endage>14,]
+  surv_momsfull <- surv_momsfull[surv_momsfull$male==0,]
   
   #Use all surviving women
   surv_moms <- surv_momsfull
@@ -93,6 +94,7 @@ ind_est_all <- function(momkidsclean){
   all_momsfull$endage <- survey-all_momsfull$dob
   all_momsfull <- all_momsfull[all_momsfull$endage<50,]
   all_momsfull <- all_momsfull[all_momsfull$endage>14,]
+  all_momsfull <- all_momsfull[all_momsfull$male==0,]
   
   #Random sample from living women 15-49 at time of survey
   all_moms <- all_momsfull
@@ -173,6 +175,7 @@ ind_est_hiv <- function(momkidsclean){
   all_momsfull$endage <- survey-all_momsfull$dob
   all_momsfull <- all_momsfull[all_momsfull$endage<50,]
   all_momsfull <- all_momsfull[all_momsfull$endage>14,]
+  all_momsfull <- all_momsfull[all_momsfull$male==0,]
   
   #Random sample from living women 15-49 at time of survey
   all_moms <- all_momsfull
