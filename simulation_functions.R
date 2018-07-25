@@ -791,28 +791,32 @@ baby.death.nohiv <- function(ages,years,u5m_c){
 #' @return (numeric) Probability of death for HIV positive children
 baby.death.hiv <- function(ages){
   
+  
+  
   # cumulative child mortality due to AIDS from Walker, Hill, and Zhao (2012)
   
-  hivchild_mort = c(0.376,  0.2019,	0.1184,	0.07061,	0.0588,	0.0234375)  
+  hivchild_mort = c("0"=0.376,  "1"=0.2019,	"2"=0.1184,	"3"=0.07061,	"4"=0.0588, "5"=0.0588,"6"=0.0588)  
   
   # Empty vector
   
-  baby.death.hiv <- vector(,length(ages) )
+  baby.death.hiv <- hivchild_mort[ages]#vector(,length(ages) )
   
-  names(baby.death.hiv) <- ages
+  baby.death.hiv[is.na(baby.death.hiv)] <- 0
   
-  # Assign mortality to each age. For ages <0 and greater than 4 prob is 0
-  for (a in ages) {
-    if(a<0){baby.death.hiv[as.character(a)]=0}
-    if(a>6){baby.death.hiv[as.character(a)]=0}
-    if(a==0){baby.death.hiv[as.character(a)]=hivchild_mort[1]}   
-    if(a==1){baby.death.hiv[as.character(a)]=hivchild_mort[2]}   
-    if(a==2){baby.death.hiv[as.character(a)]=hivchild_mort[3]}   
-    if(a==3){baby.death.hiv[as.character(a)]=hivchild_mort[4]}   
-    if(a>=4 & a <=6){baby.death.hiv[as.character(a)]=hivchild_mort[5]}   
-    
-  }
-  
+  # names(baby.death.hiv) <- ages
+  # 
+  # # Assign mortality to each age. For ages <0 and greater than 4 prob is 0
+  # for (a in ages) {
+  #   if(a<0){baby.death.hiv[a]=0}
+  #   if(a>6){baby.death.hiv[a]=0}
+  #   if(a==0){baby.death.hiv[as.character(a)]=hivchild_mort[1]}   
+  #   if(a==1){baby.death.hiv[as.character(a)]=hivchild_mort[2]}   
+  #   if(a==2){baby.death.hiv[as.character(a)]=hivchild_mort[3]}   
+  #   if(a==3){baby.death.hiv[as.character(a)]=hivchild_mort[4]}   
+  #   if(a>=4 & a <=6){baby.death.hiv[as.character(a)]=hivchild_mort[5]}   
+  #   
+  # }
+  # 
   baby.death.hiv
   
 }
@@ -1423,7 +1427,7 @@ mortality <- function(yr,w,prob.death.all,ages.as.char){
   
   # Babies infected at birth and 6 yo or younger
   
-  prob.death.babies.infected <- baby.death.hiv(w[,"age"])*(yr-w[,"hiv_date"]==w[,"age"])*(w[,"age"]<=6)
+  prob.death.babies.infected <- baby.death.hiv(ages.as.char)*(yr-w[,"hiv_date"]==w[,"age"])*(w[,"age"]<=6)
   
   # Missing value of probability means 0 probability
   prob.death.thisyear.hiv.art[is.na(prob.death.thisyear.hiv.art)] <- 0
@@ -1613,6 +1617,10 @@ w.loop.pass <- function(yr,w,ages,years,hivinc_s,prob.birth.all,prob.birth.hiv,b
   hivbirths.momshiv <- update.birth.counts.by.hiv.status(hivbirths.momshiv,nextbabies,yr)
   
   w <- rbind(w,nextbabies,males)
+  
+  # For performance, convert ages to character just once.
+  
+  ages.as.char <- as.character(w[,"age"])
   
   # Mortality
   
