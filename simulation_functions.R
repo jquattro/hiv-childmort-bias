@@ -787,7 +787,7 @@ baby.death.nohiv <- function(ages,years,u5m_c){
 #' Using cumulative child mortality due to AIDS from Walker, Hill, and Zhao (2012).
 #' Probability at ages less than 0 and greater than 4 is zero.
 #' 
-#' @param ages (integer) vector of children ages
+#' @param ages (character) vector of children ages
 #' @return (numeric) Probability of death for HIV positive children
 baby.death.hiv <- function(ages){
   
@@ -799,7 +799,7 @@ baby.death.hiv <- function(ages){
   
   # Empty vector
   
-  baby.death.hiv <- hivchild_mort[ages]#vector(,length(ages) )
+  baby.death.hiv <- as.vector(hivchild_mort[ages])#vector(,length(ages) )
   
   baby.death.hiv[is.na(baby.death.hiv)] <- 0
   
