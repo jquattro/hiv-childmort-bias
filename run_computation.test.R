@@ -28,12 +28,14 @@ base.path <- file.path(getwd(),".")
 
 source(file.path(base.path,"simulation_functions.R"))
 
-# 
+# Define the tests
 testsuite <- defineTestSuite("Computations", dirs=c("./computation.test"), testFileRegexp = "test_", testFuncRegexp = "^test_")
 
+
+# Run tests
 test.result <- runTestSuite(testsuite)
 
-
+# Print tests
 printTextProtocol(test.result)
 
 
