@@ -108,6 +108,9 @@ ind_est_all <- function(momkidsclean){
   women <- tapply(all_moms$cd, all_moms$agegrp,length)
   cdceb <- cd/totalceb
   ceb <- totalceb/women
+  mpagegroup <- seq(17,47,5)
+  fxplus2 <- ceb*mpagegroup
+  m=sum(fxplus2)/sum(ceb)
   byagegroup = cbind(c(1:7),totalceb,cd,women,cdceb,ceb)
   
   #Parity ratios
@@ -120,7 +123,7 @@ ind_est_all <- function(momkidsclean){
   lt = 1
   # Estimate n_q_0   
   for(i in 1:7){
-    nq0[i] = (abc[lt,i+2]+ abc[lt+1,i+2]*p1520 + abc[lt+2,i+2]*p2025) * byagegroup[i,5]
+    nq0[i] = (abc[lt,i+2]+ abc[lt+1,i+2]*p1520 + abc[lt+2,i+2]*p2025 +abc[lt+3,i+2]*m) * byagegroup[i,5]
   }
   
   #Estimate time reference
@@ -189,6 +192,9 @@ ind_est_hiv <- function(momkidsclean){
   women <- tapply(all_moms$cd, all_moms$agegrp,length)
   cdceb <- cd/totalceb
   ceb <- totalceb/women
+  mpagegroup <- seq(17,47,5)
+  fxplus2 <- ceb*mpagegroup
+  m=sum(fxplus2)/sum(ceb)
   byagegroup = cbind(c(1:7),totalceb,cd,women,cdceb,ceb)
   
   #Parity ratios
@@ -201,7 +207,7 @@ ind_est_hiv <- function(momkidsclean){
   lt = 1
   # Estimate n_q_0   
   for(i in 1:7){
-    nq0[i] = (abc[lt,i+2]+ abc[lt+1,i+2]*p1520 + abc[lt+2,i+2]*p2025) * byagegroup[i,5]
+    nq0[i] = (abc[lt,i+2]+ abc[lt+1,i+2]*p1520 + abc[lt+2,i+2]*p2025 +abc[lt+3,i+2]*m) * byagegroup[i,5]
   }
   
   #Estimate time reference
