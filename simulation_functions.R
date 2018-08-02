@@ -444,7 +444,7 @@ phivneg.death.ages.years <- function(ages,years,mort_s,adultmort,am_cntry,matmor
       
       if (length(res2)>0 ){
         prob.death.all[ych,ach] <- res2
-        }
+      }
       else {
         prob.death.all[ych,ach] <- 0
       }
@@ -805,8 +805,8 @@ baby.death.hiv <- function(ages){
   
   baby.death.hiv[is.na(baby.death.hiv)] <- 0
   
- 
- 
+  
+  
   baby.death.hiv
   
 }
@@ -1294,8 +1294,8 @@ new.babies <- function(yr,w,prob.birth.all,prob.birth.hiv,ages.as.char){
     (prob.birth.thisyear*(1-w[,"hiv"])*is.na(w[,"death_date"]) + # Woman HIV negative
        (1-w[,"male"])*prob.birth.thisyear.hiv.art*w[,'art']*is.na(w[,"death_date"]) + # Woman HIV positive in ART
        (1-w[,"male"])*prob.birth.thisyear.hiv.noart*(1-w[,'art'])*w[,'hiv'])*is.na(w[,"death_date"])  # Woman HIV positive not in ART
-    
-#  prob.birth.thisyear.adj <- prob.birth.thisyear.adj-prob.birth.thisyear.adj*(w[,"birthlast"])
+  
+  #  prob.birth.thisyear.adj <- prob.birth.thisyear.adj-prob.birth.thisyear.adj*(w[,"birthlast"])
   
   # Randomly create vector of TRUE (birth) or FALSE (no birth), according to the probability of birth of each
   # individual.
@@ -1429,7 +1429,7 @@ mortality <- function(yr,w,prob.death.all,ages.as.char){
     prob.death.thisyear.hiv.art*w[,'art'] + # HIV positive and in ART
     prob.death.thisyear.hiv.noart*(1-w[,'art'])*w[,'hiv']+ # HIV positive and not in ART
     prob.death.babies.infected*w[,'hiv'] # babies infected at birth
-    
+  
   # Determine randomly who died this year...
   died <- runif(nrow(w))<prob.death.thisyear.adj
   
@@ -1474,31 +1474,32 @@ HIV.infection <- function(yr,w,prob.hiv.vec,ages.as.char){
   diedthisyear <- !is.na(w[,"death_date"]) & w[,"death_date"] == yr
   newlyinfected <- gothiv & !diedthisyear
   
-  
-  
-  # Assign infection and year of infection.
-  
-  w[newlyinfected,"hiv"]=TRUE
-  w[newlyinfected,"hiv_date"]=yr
-  
-  # When an individual is infected with HIV, the square root of her initial CD4 count is 
-  # a random draw from a normal distribution with a mean of 25.9 and a standard deviation of 0.61.
-  
-  w[newlyinfected,"cd4"] = rnorm(length(which(newlyinfected)),25.91,.61)^2
-  
-  # For each woman under age 35 the absolute yearly decline in CD4 is defined by a random draw 
-  # from a normal distribution with a mean of 1.32, and a standard deviation of 1. For women 35 
-  # years or older the draw comes from a normal distribution with a mean of 2.0 and a 
-  # standard deviation of 1.
-  
-  cd4decl35 <- rnorm(nrow(w),1.32,1)
-  cd4decg35 <- rnorm(nrow(w),2,1)
-  
-  # Assign CD4 decline
-  
-  w[newlyinfected & w[,'age']<35,'cd4dec'] = cd4decl35[newlyinfected & w[,'age']<35]
-  w[newlyinfected & w[,'age']>=35,'cd4dec'] = cd4decg35[newlyinfected & w[,'age']>=35]
-  
+  if(any(newlyinfected,na.rm=TRUE)){
+    
+    # Assign infection and year of infection.
+    
+    w[newlyinfected,"hiv"]=TRUE
+    w[newlyinfected,"hiv_date"]=yr
+    
+    # When an individual is infected with HIV, the square root of her initial CD4 count is 
+    # a random draw from a normal distribution with a mean of 25.9 and a standard deviation of 0.61.
+    
+    w[newlyinfected,"cd4"] = rnorm(length(which(newlyinfected)),25.91,.61)^2
+    
+    # For each woman under age 35 the absolute yearly decline in CD4 is defined by a random draw 
+    # from a normal distribution with a mean of 1.32, and a standard deviation of 1. For women 35 
+    # years or older the draw comes from a normal distribution with a mean of 2.0 and a 
+    # standard deviation of 1.
+    
+    cd4decl35 <- rnorm(nrow(w),1.32,1)
+    cd4decg35 <- rnorm(nrow(w),2,1)
+    
+    # Assign CD4 decline
+    
+    w[newlyinfected & w[,'age']<35,'cd4dec'] = cd4decl35[newlyinfected & w[,'age']<35]
+    w[newlyinfected & w[,'age']>=35,'cd4dec'] = cd4decg35[newlyinfected & w[,'age']>=35]
+    
+  }
   # Update CD4 in people infected in previous years.
   
   oldinfected <- w[,"hiv"] & !newlyinfected
@@ -1777,10 +1778,10 @@ realized.hiv.art <- function(w,start_year,end_year){
     hivnew[i] = nrow(hpos6)
     
     # Women alive in year i eligible for ART but not on ART
-      # Eligible and not on ART in year i, but started after year i
-      num_elig1a = subset(hpos5, hpos5[,"art_e"]>0 & hpos5[,"art_e"]<=i & hpos5[,"art_date"]>i & !is.na(hpos5[,"death_date"]))
-      # Eligible and not on ART in year i, never started
-      num_elig1b = subset(hpos5, hpos5[,"art_e"]>0 & hpos5[,"art_e"]<=i & is.na(hpos5[,"art_date"]) & !is.na(hpos5[,"death_date"]))
+    # Eligible and not on ART in year i, but started after year i
+    num_elig1a = subset(hpos5, hpos5[,"art_e"]>0 & hpos5[,"art_e"]<=i & hpos5[,"art_date"]>i & !is.na(hpos5[,"death_date"]))
+    # Eligible and not on ART in year i, never started
+    num_elig1b = subset(hpos5, hpos5[,"art_e"]>0 & hpos5[,"art_e"]<=i & is.na(hpos5[,"art_date"]) & !is.na(hpos5[,"death_date"]))
     
     num_elig2 = rbind(num_elig1a,num_elig1b) 
     num_elig[i] = nrow(num_elig2)
@@ -1890,7 +1891,7 @@ children.dead.per.mother <- function(w){
   
   w <- w[,colnames(w) != "cd2"]
   
- 
+  
   w
   
 }
