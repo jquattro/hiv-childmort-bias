@@ -825,15 +825,9 @@ baby.death.hiv <- function(ages){
 #' @param age (integer) current age
 #' @param year (integer) current year in simulation
 #' @param hivinc_s (data.frame) HIV incidence curve estimated by Hogan and Salomon (2012) for a specific country
-#' @param c15 (integer) number of people in the simulation between 15 and 19 years
-#' @param c20 (integer) number of people in the simulation between 20 and 24 years
-#' @param c25 (integer) number of people in the simulation between 25 and 29 years
-#' @param c30 (integer) number of people in the simulation between 30 and 34 years
-#' @param c35 (integer) number of people in the simulation between 35 and 39 years
-#' @param c40 (integer) number of people in the simulation between 40 and 44 years
-#' @param c45 (integer) number of people in the simulation between 45 and 49 years
+#' @param inc2529_denom (numeric) denominator to compute incidence for the reference group: ages 25-29 
 #' @return (numeric) Annual probability of HIV infection
-prob.hiv <- function(age,year,hivinc_s,c15,c20,c25,c30,c35,c40,c45){
+prob.hiv <- function(age,year,hivinc_s,inc2529_denom){
   
   # Prob 0 before 1975
   if(year<1975){
@@ -842,7 +836,7 @@ prob.hiv <- function(age,year,hivinc_s,c15,c20,c25,c30,c35,c40,c45){
     
     # Get the incidence value for current year
     hivcol = (year-1970)+2
-    hivinc = as.numeric(hivinc_s[hivcol])
+    hivinc = hivinc_s[hivcol]
     
     # Compute probability at specific ages.
     
@@ -850,16 +844,7 @@ prob.hiv <- function(age,year,hivinc_s,c15,c20,c25,c30,c35,c40,c45){
     
     # First compute incidence for the reference group: ages 25-29 
     
-    normalization <- c15+c20+c25+c30+c35+c40+c45
-    
-    inc2529=hivinc/(.594*(c15/(normalization))
-                    +1.325*(c20/(normalization))
-                    +(c25/(normalization))
-                    +.752*(c30/(normalization))
-                    +.635*(c35/(normalization))
-                    +.551*(c40/(normalization))
-                    +.356*(c45/(normalization))
-    )
+    inc2529=hivinc/inc2529_denom
     
     # Now, use use age-specific HIV incidence ratios from Heuveline (2003) to compute risk at each age group
     
@@ -936,12 +921,23 @@ prob.hiv.ages.years <- function(ages,years,hivinc_s,c15,c20,c25,c30,c35,c40,c45)
   row.names(prob.hiv.vec) <- ages
   colnames(prob.hiv.vec) <- years
   
+  normalization <- c15+c20+c25+c30+c35+c40+c45
+  
+  inc2529_denom=(.594*(c15/(normalization))
+                  +1.325*(c20/(normalization))
+                  +(c25/(normalization))
+                  +.752*(c30/(normalization))
+                  +.635*(c35/(normalization))
+                  +.551*(c40/(normalization))
+                  +.356*(c45/(normalization))
+  )
+  
   # Compute probability of HIV for each age an year. 
   for (a in ages) {
     for (y in years) {
       
       # probability of HIV
-      res <- as.numeric(prob.hiv(a,y,hivinc_s,c15,c20,c25,c30,c35,c40,c45))
+      res <- as.numeric(prob.hiv(a,y,hivinc_s,inc2529_denom))
       
       
       if (length(res)>0 ){
@@ -1496,8 +1492,15 @@ HIV.infection <- function(yr,w,prob.hiv.vec,ages.as.char){
     
     # Assign CD4 decline
     
-    w[newlyinfected & w[,'age']<35,'cd4dec'] = cd4decl35[newlyinfected & w[,'age']<35]
-    w[newlyinfected & w[,'age']>=35,'cd4dec'] = cd4decg35[newlyinfected & w[,'age']>=35]
+    age_lt_35 <- w[,'age']<35
+    age_ge_35 <- !age_lt_35
+    
+    newlyinfected_and_age_lt_35 <- newlyinfected & age_lt_35
+    newlyinfected_and_age_ge_35 <- newlyinfected & age_ge_35
+    
+    
+    w[newlyinfected_and_age_lt_35,'cd4dec'] = cd4decl35[newlyinfected_and_age_lt_35]
+    w[newlyinfected_and_age_ge_35,'cd4dec'] = cd4decg35[newlyinfected_and_age_ge_35]
     
   }
   # Update CD4 in people infected in previous years.
@@ -1533,8 +1536,11 @@ ART.initiation <- function(yr,w,artprobs,threshold){
   newlyart = runif(nrow(w))<artprobs[artprobs[,"yr"]==yr,2]
   
   # Update the matrix
-  w[couldgetart & newlyart,"art"] = TRUE # New people in ART
-  w[couldgetart & newlyart,"art_date"] = yr # Year ART was started
+  
+  couldgetart_and_newlyart <- couldgetart & newlyart
+  
+  w[couldgetart_and_newlyart,"art"] = TRUE # New people in ART
+  w[couldgetart_and_newlyart,"art_date"] = yr # Year ART was started
   
   w
 }
@@ -1925,7 +1931,8 @@ bigsim <- function(inp,initialpop,years,ages,hivhogan,mort_series,adultmort,worl
   u5m_c = subset(u5m_edit, country==cm_cntry)
   artprobs=cbind(art_series[,"yr"],art_series[,art_col])
   colnames(artprobs) = c("yr","artinc")
-  hivinc_s = hivhogan[hivhogan$Country==curve,]    
+  hivinc_s = as.numeric(hivhogan[hivhogan$Country==curve,])
+  names(hivinc_s) <- NULL
   
   # Run simulation
   

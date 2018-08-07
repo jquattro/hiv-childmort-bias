@@ -929,7 +929,22 @@ test_mortality_01 <- function(){
   u5m_edit<- read.csv(file.path(base.path,"data/u5m_edit.csv"),head=TRUE) 
   u5m_c <- subset(u5m_edit, country==cm_cntry)
   
-  prob.death.all <- phivneg.death.ages.years(ages,years,mort_s,adultmort,am_cntry,matmort,u5m_c)
+  tfr_series= read.csv(file.path(base.path,"data/tfr_gapminder_long.csv"),head=TRUE)
+  
+  fertcountry <- c("Botswana")
+  
+  tfr_s = tfr_series[tfr_series[,"country"]==fertcountry,]
+  
+  worldfert= read.csv(file.path(base.path,"/data/world_fert.csv"),head=TRUE)
+  
+  asfr_s=worldfert[worldfert[,"country"]==fertcountry,]
+  
+  prob.birth.all <- prob.birth.ages.years(ages,years,asfr_s,tfr_s)
+  
+  mmr0 <- c(0.0012)
+  mmr_dec <- c(0.073)
+  
+  prob.death.all <- phivneg.death.ages.years(ages,years,mort_s,adultmort,am_cntry,matmort,u5m_c,prob.birth.all,mmr0,mmr_dec)
   
   set.seed(200)
   
@@ -946,7 +961,10 @@ test_mortality_01 <- function(){
                               TRUE ~ as.numeric(NA))) %>% select(-died,-pr.death) %>%as.matrix
   
   set.seed(200)
-  test <- mortality(yr,w,prob.death.all)
+  
+  ages.as.char <- as.character(w[,"age"])
+  
+  test <- mortality(yr,w,prob.death.all,ages.as.char)
 
   checkEquals(target,test)    
   
