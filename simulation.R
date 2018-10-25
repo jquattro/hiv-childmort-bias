@@ -10,6 +10,11 @@ if(!dir.exists("./results/regdata")){
   dir.create("./results/regdata",recursive = TRUE)
 }
 
+if(!require(dplyr)){
+  install.packages("dplyr",dependencies = TRUE,repos='http://cran.us.r-project.org')
+}
+
+
 require(dplyr)
 
 
