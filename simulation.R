@@ -12,6 +12,45 @@ if(!dir.exists("./results/regdata")){
 
 require(dplyr)
 
+
+if(!require(foreach)){
+  install.packages("foreach",dependencies = TRUE,repos='http://cran.us.r-project.org')
+}
+
+require(foreach)
+
+
+if(!require(iterators)){
+  install.packages("iterators",dependencies = TRUE,repos='http://cran.us.r-project.org')
+}
+
+require(iterators)
+
+if(!require(parallel)){
+  install.packages("parallel",dependencies = TRUE,repos='http://cran.us.r-project.org')
+}
+
+require(parallel)
+
+# The code in this script does an extensive use of the foreach package for better performance we need to register a 
+# parallel backend. Here we use the doRedis package that offers an interface to a Redis server installed
+# on the computer. The number of workers should be adjusted to the memory and cpu resources on the computer.
+# 
+if(!require(doRedis)){
+  install.packages("doRedis",dependencies = TRUE,repos='http://cran.us.r-project.org')
+}
+require(doRedis)
+
+redisConnect()
+
+removeQueue("process")
+
+registerDoRedis("process")
+
+startLocalWorkers(n=detectCores(),queue="process")
+
+options('redis:num'=TRUE)
+
 ##### SIMULATION #####
 
 # Read data
@@ -34,6 +73,9 @@ hivhogan[63,c(2:47)]=0
 
 
 # Create parameters sets
+
+
+
 
 fertcountry <- c("Botswana","Uganda")
 cm_cntry <-  c("Mali","Morocco")
@@ -59,50 +101,98 @@ threshold <- 200
 inputs <- expand.grid(fertcountry, cm_cntry, am_cntry, sexactive15,mmr0,mmr_dec,curve,bfeed,art_col,growth,yrend,yrstart,threshold)
 names(inputs) = c("fertcountry", "cm_cntry","am_cntry","sexactive15","mmr0","mmr_dec","curve","bfeed","art_col","growth","yrend","yrstart","threshold")
 
+save(inputs,file = "results/models/inputs.RData")
+
 file_number_format <- paste0("%0",nchar(as.character(nrow(inputs))),"d")
 
 # Parameter sets already processed
 
-psets_already <- table(
-  c(
-    as.integer(gsub("regdata\\.|\\.Rdata","",list.files("./results/regdata",pattern = "regdata.\\d+",full.names = FALSE))),
-    as.integer(gsub("figdata\\.|\\.Rdata","",list.files("./results/figdata",pattern = "figdata.\\d+",full.names = FALSE))))
-)
+# psets_already <- table(
+#   c(
+#    as.integer(gsub("regdata\\.|\\.Rdata","",list.files("./results/regdata",pattern = "regdata.\\d+",full.names = FALSE))),
+#    as.integer(gsub("figdata\\.|\\.Rdata","",list.files("./results/figdata",pattern = "figdata.\\d+",full.names = FALSE))))
+# 
+# )
+# 
+# psets_already <- data.frame(psets_already)
+# 
+# psets_already <- as.integer(as.character(psets_already[psets_already$Freq==2,"Var1"]))
 
-psets_already <- data.frame(psets_already)
+psets_already <- as.integer(gsub("models|\\.Rdata","",list.files("./results/models",pattern = "models\\d+",full.names = FALSE)))
 
-psets_already <- as.integer(as.character(psets_already[psets_already$Freq==2,"Var1"]))
-           
 psets_to_process <- setdiff(1:nrow(inputs),psets_already)
- 
+
 #Set size of initial population
- 
-ip<- 7500
+
+ip<- 22500
 
 years <- c(1906:2010)
 ages <- c(0:120)
 
-         
+
 # Run simulation for each set of parameters
 
-for(pset in psets_to_process){
+foreach(pset=psets_to_process,.packages = c("dplyr")) %dopar%{
   # pset <- psets_to_process[1]
   inp <- inputs[pset,]
   
+  source("simulation_functions.R")
   
+  source("indirect_estimates_functions.R")
   
   
   
   # Generate population
   set.seed(1000)
-  profvis(results <- bigsim(inp,initialpop=ip,years,ages,hivhogan,mort_series,adultmort,worldfert,tfr_series,art_series,u5m_edit,matmort))
+  results <- bigsim(inp,initialpop=ip,years,ages,hivhogan,mort_series,adultmort,worldfert,tfr_series,art_series,u5m_edit,matmort)
+  
+  save(results,file=file.path("results/models",paste("models",sprintf(file_number_format,pset),".Rdata",sep="")))
+}
+
+
+hiv2000 <- foreach(pset=psets_to_process,.packages = c("dplyr")) %dopar%{
+  # pset <- psets_to_process[1]
+  
+  c("p7500","p15000","p22500") %>% lapply(function(popini){
+    load(file.path("results/models/",popini,paste("models",sprintf(file_number_format,pset),".Rdata",sep="")))
+    r <- results[[1]]$hiv2000
+    names(r) <- popini
+    r
+  }) %>% unlist() %>% t %>% data.frame(input_set=pset,.)
   
   
-  ##### INDIRECT ESTIMATES #####
+} %>% bind_rows
+
+hiv2000 <- hiv2000 %>% mutate(p7500_minus_p15000=p7500-p15000,p15000_minus_p22500=p15000-p22500)
+
+save(hiv2000,file = "results/hiv2000.RData")
+
+
+
+##### INDIRECT ESTIMATES #####
+
+psets_already <- intersect(as.integer(gsub("figdata.|\\.Rdata","",list.files("./results/figdata/p22500",pattern = "figdata.\\d+",full.names = FALSE))),
+                           as.integer(gsub("regdata.|\\.Rdata","",list.files("./results/regdata/p22500",pattern = "regdata.\\d+",full.names = FALSE))))
+
+psets_to_process <- setdiff(1:nrow(inputs),psets_already)
+
+
+foreach(pset=psets_to_process,.packages = c("dplyr")) %dopar%{
+  # pset <- psets_to_process[1]
+  source("indirect_estimates_functions.R")
   
-  
+    load(file.path("results/models/p22500",paste("models",sprintf(file_number_format,pset),".Rdata",sep="")))
+
   
   w <- results[[7]]
+  
+  # Are babies of HIV moms getting HIV?
+  # What percent of HIV moms babies have HIV?
+  # How many born with HIV? 
+  # df = as.data.frame(w)
+  # y <- subset(df, hiv_date==2009)
+  # plot(df$dob, df$hiv_date)  
+  ##################################################  
   
   # format data
   momkidsclean <- as.data.frame(w)
@@ -119,22 +209,43 @@ for(pset in psets_to_process){
   
   ie.three <- cbind(isf,isf_all,isf_hiv,pset)
   
-  
-  
   ###################################################################
-  # merge ie.three.Rdata with necessary info from pop20000vec.iZ.Rdata
+  # Save results for regressions and for figures
   ###################################################################
   
-  regdata <- cbind(ie.three,results[[1]])
-  figdata <- results[c(2:7,10:12)]
   
-  save(regdata,file=file.path("results/regdata",paste("regdata.",sprintf(file_number_format,pset),".Rdata",sep="")))
-  save(figdata,file=file.path("results/figdata",paste("figdata.",sprintf(file_number_format,pset),".Rdata",sep="")))
+inp.plus <- as.data.frame(results[1])    
+regdata <- cbind(ie.three,inp.plus[1,])
+figdata <- results[c(2:6,8:9)]
   
-  rm(results,regdata,figdata,momkidsclean,isf,isf_all,isf_hiv,ie.three)
+save(regdata,file=file.path("results/regdata/p22500",paste("regdata.",sprintf(file_number_format,pset),".Rdata",sep="")))
+save(figdata,file=file.path("results/figdata/p22500",paste("figdata.",sprintf(file_number_format,pset),".Rdata",sep="")))
+
+rm(results,regdata,figdata,momkidsclean,isf,isf_all,isf_hiv,ie.three)
 }
 
 ##### COLLECT DATA FROM ALL SIMULATIONS #####
+
+
+# Merge regdata
+
+psets_to_process <- as.integer(gsub("regdata.|\\.Rdata","",list.files("./results/regdata/p22500",pattern = "regdata.\\d+",full.names = FALSE))) %>% sort
+
+nbd2k <- psets_to_process %>% lapply(function(pset){
+  # pset <- 1
+  filename <- file.path("results/regdata/p22500",paste("regdata.",sprintf(file_number_format,pset),".Rdata",sep=""))
+  tryCatch({
+    load(filename)
+    
+    regdata %>% mutate(i=pset) %>% select(i,everything())
+    
+  }, error=function(e){cat("ERROR :",conditionMessage(e), "\n")})
+}) %>% bind_rows() %>% as.data.frame()
+
+
+save(nbd2k,file="./results/regdata/p22500/regdata_all.Rdata")
+
+
 
 h <- list()
 tf<- list()
@@ -148,7 +259,7 @@ hivinc <- list()
 
 
 for(filename in sort(list.files("./results/figdata",pattern = "figdata.\\d+",full.names = TRUE))){
-    
+  
   tryCatch({
     load(filename)
     
@@ -173,8 +284,12 @@ save(h,tf,ar,hd,u5m,inps,arp,u5mhiv,hivinc,file="./results/figdata_all.Rdata")
 
 nbd2k=NA
 
+# Merge regdata
 
-for(filename in sort(list.files("./results/regdata",pattern = "regdata.\\d+",full.names = TRUE))){
+psets_to_process <- 1:nrow(inputs)
+
+
+psets_to_process %>% lapply(function(pset) {
   
   tryCatch({
     load(filename)

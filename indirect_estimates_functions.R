@@ -77,16 +77,17 @@ ind_est <- function(momkidsclean){
   return(ind_surv)
 }
 
-
-
-##### USING ALL WOMEN #####
-
+#############################################
+### USING ALL WOMEN
+###############################################
 
 ind_est_all <- function(momkidsclean){
   
   # RANDOM SAMPLE OF SURVIVING WOMEN: Calculate CEB/CS 
   all_momsfull = momkidsclean
   
+  #surv_momsfull = momkidsclean[is.na(momkidsclean$death_date),]
+  #dead_moms = momkidsclean[!is.na(momkidsclean$death_date),]
   
   #Create age group variable
   yrend = 2010
@@ -156,22 +157,22 @@ ind_est_all <- function(momkidsclean){
   return(ind_all)
 }
 
-
-#### USING SURVIVING WOMEN AND WOMEN WHO DIED FROM HIV #####
-
+#############################################################
+### USING SURVIVING WOMEN AND WOMEN WHO DIED FROM HIV
+#########################################################
 
 ind_est_hiv <- function(momkidsclean){
   
   # Keep surviving moms and moms who died from HIV
-  
   #Surviving moms
   surv_momsfull = momkidsclean[is.na(momkidsclean$death_date),]
-
   #Moms who died from HIV
-  hiv_momsfull = momkidsclean[momkidsclean$hivdeath==1,]
+  hiv_momsfull = momkidsclean[momkidsclean$hivdeath==1 & !is.na(momkidsclean$hivdeath),]
   all_momsfull <- rbind(surv_momsfull,hiv_momsfull)
   
-
+  #surv_momsfull = momkidsclean[is.na(momkidsclean$death_date),]
+  #dead_moms = momkidsclean[!is.na(momkidsclean$death_date),]
+  
   #Create age group variable
   yrend = 2010
   survey = yrend  
