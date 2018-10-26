@@ -250,6 +250,7 @@ nbd2k <- psets_to_process %>% lapply(function(pset){
 
 save(nbd2k,file="./results/regdata/p22500/regdata_all.Rdata")
 
+# Merge figdata
 
 
 h <- list()
@@ -259,51 +260,29 @@ hd<- list()
 u5m <- list()
 inps <- list()
 arp <- list()
-u5mhiv <- list()
-hivinc <- list()
 
+psets_to_process <- as.integer(gsub("figdata.|\\.Rdata","",list.files("./results/figdata/p22500",pattern = "figdata.\\d+",full.names = FALSE))) %>% sort
 
-for(filename in sort(list.files("./results/figdata",pattern = "figdata.\\d+",full.names = TRUE))){
-  
+for(pset in psets_to_process){
+  # pset <- 1
+  filename <- file.path("results/figdata/p22500",paste("figdata.",sprintf(file_number_format,pset),".Rdata",sep=""))
   tryCatch({
     load(filename)
     
-    i <- as.integer(gsub("figdata\\.|\\.Rdata","",basename(filename)))
-    h[[i]] <- figdata[[3]]
-    tf[[i]] <- figdata[[1]]
-    ar[[i]] <- figdata[[2]]
-    hd[[i]] <- figdata[[4]]
-    u5m[[i]] <- figdata[[5]]
-    inps[[i]] <- figdata[[6]]
-    arp[[i]] <- figdata[[7]]
-    u5mhiv[[i]] <- figdata[[8]]
-    hivinc[[i]] <- figdata[[9]]
+    
+    h[[pset]] <- figdata[[3]]
+    tf[[pset]] <- figdata[[1]]
+    ar[[pset]] <- figdata[[2]]
+    hd[[pset]] <- figdata[[4]]
+    u5m[[pset]] <- figdata[[5]]
+    inps[[pset]] <- figdata[[6]]
+    arp[[pset]] <- figdata[[7]]
     rm(figdata)
     
   }, error=function(e){cat("ERROR :",conditionMessage(e), "\n")})
 }
 
-save(h,tf,ar,hd,u5m,inps,arp,u5mhiv,hivinc,file="./results/figdata_all.Rdata")
+save(h,tf,ar,hd,u5m,inps,arp,file="./results/figdata/p22500/figdata_all.Rdata")
 
 
 
-nbd2k=NA
-
-# Merge regdata
-
-psets_to_process <- 1:nrow(inputs)
-
-
-psets_to_process %>% lapply(function(pset) {
-  
-  tryCatch({
-    load(filename)
-    nbd2k <- rbind(nbd2k,regdata)
-    rm(regdata)
-    
-  }, error=function(e){cat("ERROR :",conditionMessage(e), "\n")})
-}
-
-nbd2k <- nbd2k[2:length(nbd2k[,1]),]
-
-save(nbd2k,file="./results/regdata_all.Rdata")
