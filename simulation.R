@@ -222,7 +222,9 @@ foreach(pset=psets_to_process,.packages = c("dplyr")) %dopar%{
 inp.plus <- as.data.frame(results[1])    
 regdata <- cbind(ie.three,inp.plus[1,])
 figdata <- results[c(2:6,8:9)]
-  
+
+# tfr,art_cov[c(2000:2010)],hiv_prev[c(1980:2010)],hivdeathrate,inp,art_prev[c(2000:2010)],hiv_inc[c(1980:2010)]
+
 save(regdata,file=file.path("results/regdata/p22500",paste("regdata.",sprintf(file_number_format,pset),".Rdata",sep="")))
 save(figdata,file=file.path("results/figdata/p22500",paste("figdata.",sprintf(file_number_format,pset),".Rdata",sep="")))
 
@@ -260,6 +262,7 @@ hd<- list()
 u5m <- list()
 inps <- list()
 arp <- list()
+hivinc <- list()
 
 psets_to_process <- as.integer(gsub("figdata.|\\.Rdata","",list.files("./results/figdata/p22500",pattern = "figdata.\\d+",full.names = FALSE))) %>% sort
 
@@ -268,15 +271,16 @@ for(pset in psets_to_process){
   filename <- file.path("results/figdata/p22500",paste("figdata.",sprintf(file_number_format,pset),".Rdata",sep=""))
   tryCatch({
     load(filename)
-    
+    # tfr,art_cov[c(2000:2010)],hiv_prev[c(1980:2010)],hivdeathrate,inp,art_prev[c(2000:2010)],hiv_inc[c(1980:2010)]  
     
     h[[pset]] <- figdata[[3]]
     tf[[pset]] <- figdata[[1]]
     ar[[pset]] <- figdata[[2]]
     hd[[pset]] <- figdata[[4]]
-    u5m[[pset]] <- figdata[[5]]
-    inps[[pset]] <- figdata[[6]]
-    arp[[pset]] <- figdata[[7]]
+    #u5m[[pset]] <- figdata[[5]]
+    inps[[pset]] <- figdata[[5]]
+    arp[[pset]] <- figdata[[6]]
+    hivinc[[pset]] <- figdata[[7]]
     rm(figdata)
     
   }, error=function(e){cat("ERROR :",conditionMessage(e), "\n")})
