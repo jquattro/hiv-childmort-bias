@@ -160,6 +160,62 @@ figure_1 <- arrangeGrob(g_a_title,g_a,g_b_title,g_b,g_c_title,g_c,g_d_title,g_d,
 
 
 
-ggsave("figures/Figure1.png",width = 8.5,height = 8.5,figure_1)
+ggsave("figures/Figure1.png",width = 8.5,height = 8.5,dpi=300,figure_1)
 
 
+
+# Figure 2
+
+
+
+
+
+art_countries <- lapply(inps,function(x) x$art_col) %>% unlist %>% unique %>% setdiff("zero")
+
+
+art_series= read.csv("./data/sampleART.csv",head=TRUE)
+
+
+
+to.plot <- art_series   %>% gather(country,art,-yr) %>% rename(year=yr) %>% filter(country %in% art_countries) %>% filter(year>=2000)
+
+label_data <- to.plot %>% filter(year==2013) %>%
+  mutate(country= factor(country,levels=c("Botswana","Cameroon","Malawi","Bot_dub"),labels=c("Botswana","Cameroon","Malawi","Botswana doubled")))
+
+
+
+
+figure_2 <- ggplot(to.plot,aes(x=year,y=art)) + 
+  geom_line(aes(color=country),size=1) + 
+  geom_text(data=label_data,aes(label=country),color="black",fontface="bold",vjust=-1) +
+  scale_colour_grey(start = 0, end = .8) +
+  theme_bw() + 
+  theme(panel.grid = element_blank(),legend.position = "none") +
+  xlab("Year")+
+  ylab("Probability of ART initiation given eligibility") +
+  ylim(0,0.2)
+
+
+
+
+
+ggsave("figures/Figure2.png",width = 5,height = 5,dpi = 300,figure_2)
+
+
+
+# Figure 3
+
+rm(list=ls())
+
+load("./results/regdata/p22500/regdata_all.Rdata")
+load("./results/models/p22500/inputs.RData")
+
+
+pdf(file=paste("IEhiv.vs.IEsurv",i,".pdf"))
+plot(nbd2k$fiveq0_hiv,nbd2k$fiveq0_surv,
+     xlab="Indirect estimates, surviving women & HIV deaths",
+     ylab="Indirect estimates, surviving women only",
+     ylim = c(0,.3),
+     xlim = c(0,.3))
+abline(0,1)
+dev.off()
