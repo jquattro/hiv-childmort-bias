@@ -210,12 +210,14 @@ rm(list=ls())
 load("./results/regdata/p22500/regdata_all.Rdata")
 load("./results/models/p22500/inputs.RData")
 
+figure_3 <- ggplot(nbd2k,aes(x=fiveq0_hiv,y=fiveq0_surv)) + 
+  geom_point(alpha=0.25) +
+  xlab("Indirect estimates, surviving women & HIV deaths")+
+  ylab("Indirect estimates, surviving women only")+
+ylim(0,.3)+
+xlim(0,.3)+
+  geom_abline(intercept = 0,slope=1)+
+  theme_bw()+
+  theme(panel.grid = element_blank())
 
-pdf(file=paste("IEhiv.vs.IEsurv",i,".pdf"))
-plot(nbd2k$fiveq0_hiv,nbd2k$fiveq0_surv,
-     xlab="Indirect estimates, surviving women & HIV deaths",
-     ylab="Indirect estimates, surviving women only",
-     ylim = c(0,.3),
-     xlim = c(0,.3))
-abline(0,1)
-dev.off()
+ggsave("figures/Figure3.png",width = 5,height = 5,dpi = 300,figure_3)
