@@ -59,7 +59,7 @@ nbd2k %<>% mutate(corr=fiveq0_hiv-fiveq0_surv,
 # Prepare data
 
 to.model <- nbd2k %>% mutate(
-  agegroup=as.factor(agegroup))
+  agegroup=as.factor(agegroup)) 
   
 
 
@@ -80,45 +80,83 @@ model.max <- glm(formula=full.model.formula,
 
 # minimum model
 
-model.min <- glm(formula=minimum.model.formula, family = "gaussian"(link="identity"), data=nbd2k)
+model.min <- glm(formula=minimum.model.formula, family = "gaussian"(link="identity"), data=to.model)
 
 forward.BIC <- step(object=model.min, scope=list(upper=model.max,lower=~1), direction="forward",k=log(nrow(to.model)))
 
-
+# Step:  AIC=-275402.2
+# corr ~ fiveq0_surv + hiv2000 + agegroup + hiv1990 + hiv2010 + 
+#   hiv2000:agegroup + agegroup:hiv1990 + agegroup:hiv2010
+# 
+# Df Deviance     AIC
+# <none>             0.27910 -275402
+# + art_prev2009  1  0.27901 -275402
+# + art_prev2007  1  0.27902 -275401
+# + art_prev2005  1  0.27904 -275398
+# + tfr2000       1  0.27906 -275396
+# + tfr2010       1  0.27907 -275396
 
 # Call:  glm(formula = corr ~ fiveq0_surv + hiv2000 + agegroup + hiv1990 + 
 #              hiv2010 + hiv2000:agegroup + agegroup:hiv1990 + agegroup:hiv2010, 
-#            family = gaussian(link = "identity"), data = nbd2k)
+#            family = gaussian(link = "identity"), data = to.model)
 # 
 # Coefficients:
-#   (Intercept)       fiveq0_surv           hiv2000          agegroup           hiv1990           hiv2010  
-# 0.0013649        -0.0142237        -0.0048914         0.0002069        -0.0499804         0.0186521  
-# hiv2000:agegroup  agegroup:hiv1990  agegroup:hiv2010  
-# 0.0165021         0.0199525        -0.0060539  
+#   (Intercept)        fiveq0_surv            hiv2000          agegroup2          agegroup3          agegroup4  
+# 1.334e-03         -1.094e-02          9.672e-03         -1.837e-05          2.085e-04          2.855e-04  
+# agegroup5          agegroup6          agegroup7            hiv1990            hiv2010  hiv2000:agegroup2  
+# 4.213e-04          5.738e-04          9.499e-04         -5.711e-03          2.534e-04         -7.414e-03  
+# hiv2000:agegroup3  hiv2000:agegroup4  hiv2000:agegroup5  hiv2000:agegroup6  hiv2000:agegroup7  agegroup2:hiv1990  
+# 2.328e-02          8.033e-02          1.177e-01          8.658e-02          5.920e-02          8.408e-03  
+# agegroup3:hiv1990  agegroup4:hiv1990  agegroup5:hiv1990  agegroup6:hiv1990  agegroup7:hiv1990  agegroup2:hiv2010  
+# -4.207e-04         -9.773e-03          3.373e-02          1.083e-01          1.085e-01          7.824e-03  
+# agegroup3:hiv2010  agegroup4:hiv2010  agegroup5:hiv2010  agegroup6:hiv2010  agegroup7:hiv2010  
+# 9.686e-03          3.414e-03         -1.158e-02         -2.374e-02         -2.875e-02  
 # 
-# Degrees of Freedom: 31359 Total (i.e. Null);  31351 Residual
+# Degrees of Freedom: 31359 Total (i.e. Null);  31331 Residual
 # Null Deviance:	    4.986 
-# Residual Deviance: 1.095 	AIC: -232800
+# Residual Deviance: 0.2791 	AIC: -275600
 
 forward.AIC <- step(object=model.min, scope=list(upper=model.max,lower=~1), direction="forward",k=2)
 
+# Step:  AIC=-275868
+# corr ~ fiveq0_surv + hiv2000 + agegroup + hiv1990 + hiv2010 + 
+#   art_prev2009 + art_prev2005 + art_prev2007 + tfr2000 + tfr2010 + 
+#   hiv2000:agegroup + agegroup:hiv1990 + agegroup:hiv2010 + 
+#   agegroup:art_prev2009 + agegroup:art_prev2005 + agegroup:art_prev2007
+
 # Call:  glm(formula = corr ~ fiveq0_surv + hiv2000 + agegroup + hiv1990 + 
-#              hiv2010 + art_prev2009 + art_prev2005 + art_prev2007 + hiv2000:agegroup + 
-#              agegroup:hiv1990 + agegroup:hiv2010 + agegroup:art_prev2009 + 
-#              agegroup:art_prev2005 + agegroup:art_prev2007, family = gaussian(link = "identity"), 
-#            data = nbd2k)
+#              hiv2010 + art_prev2009 + art_prev2005 + art_prev2007 + tfr2000 + 
+#              tfr2010 + hiv2000:agegroup + agegroup:hiv1990 + agegroup:hiv2010 + 
+#              agegroup:art_prev2009 + agegroup:art_prev2005 + agegroup:art_prev2007, 
+#            family = gaussian(link = "identity"), data = to.model)
 # 
 # Coefficients:
-#   (Intercept)            fiveq0_surv                hiv2000               agegroup                hiv1990  
-# 0.001327              -0.014178              -0.002884               0.000219              -0.049910  
-# hiv2010           art_prev2009           art_prev2005           art_prev2007       hiv2000:agegroup  
-# 0.014603               0.174254              -2.591366               0.269457               0.016005  
-# agegroup:hiv1990       agegroup:hiv2010  agegroup:art_prev2009  agegroup:art_prev2005  agegroup:art_prev2007  
-# 0.019860              -0.004939              -0.013344               1.251603              -0.256641  
+#   (Intercept)             fiveq0_surv                 hiv2000               agegroup2               agegroup3  
+# 2.526e-04              -1.093e-02               1.194e-02              -1.908e-05               1.912e-04  
+# agegroup4               agegroup5               agegroup6               agegroup7                 hiv1990  
+# 2.735e-04               4.575e-04               6.514e-04               9.996e-04              -5.359e-03  
+# hiv2010            art_prev2009            art_prev2005            art_prev2007                 tfr2000  
+# -1.989e-03               4.657e-02               3.238e-01              -1.449e-01               1.538e-03  
+# tfr2010       hiv2000:agegroup2       hiv2000:agegroup3       hiv2000:agegroup4       hiv2000:agegroup5  
+# -1.538e-03              -7.493e-03               2.454e-02               8.274e-02               1.189e-01  
+# hiv2000:agegroup6       hiv2000:agegroup7       agegroup2:hiv1990       agegroup3:hiv1990       agegroup4:hiv1990  
+# 8.387e-02               5.622e-02               8.440e-03              -4.261e-04              -1.011e-02  
+# agegroup5:hiv1990       agegroup6:hiv1990       agegroup7:hiv1990       agegroup2:hiv2010       agegroup3:hiv2010  
+# 3.288e-02               1.077e-01               1.083e-01               7.896e-03               7.513e-03  
+# agegroup4:hiv2010       agegroup5:hiv2010       agegroup6:hiv2010       agegroup7:hiv2010  agegroup2:art_prev2009  
+# 4.431e-04              -1.138e-02              -1.772e-02              -2.285e-02              -1.678e-02  
+# agegroup3:art_prev2009  agegroup4:art_prev2009  agegroup5:art_prev2009  agegroup6:art_prev2009  agegroup7:art_prev2009  
+# 1.002e-01               2.512e-01               3.348e-01               2.249e-02              -2.419e-01  
+# agegroup2:art_prev2005  agegroup3:art_prev2005  agegroup4:art_prev2005  agegroup5:art_prev2005  agegroup6:art_prev2005  
+# -1.601e-01              -1.329e+00              -1.671e-01               5.277e+00               8.260e+00  
+# agegroup7:art_prev2005  agegroup2:art_prev2007  agegroup3:art_prev2007  agegroup4:art_prev2007  agegroup5:art_prev2007  
+# 3.982e+00               6.677e-02               1.116e-01              -4.431e-01              -1.812e+00  
+# agegroup6:art_prev2007  agegroup7:art_prev2007  
+# -1.883e+00              -4.572e-01  
 # 
-# Degrees of Freedom: 31359 Total (i.e. Null);  31345 Residual
+# Degrees of Freedom: 31359 Total (i.e. Null);  31308 Residual
 # Null Deviance:	    4.986 
-# Residual Deviance: 1.093 	AIC: -232900
+# Residual Deviance: 0.2767 	AIC: -275900
 
 
 # Backward selection
@@ -236,6 +274,7 @@ back.AIC <- step(model.max, direction="backward",k=2)
 # Null Deviance:	    4.986 
 # Residual Deviance: 0.2767 	AIC: -275900
 
+formula(forward.AIC)
 
 model.formula.selected.1 <- formula(back.AIC)
 
@@ -364,6 +403,35 @@ best.fitting.model.formula <- model.formula.selected.3
 
 
 best.fitting.model <- glm(best.fitting.model.formula,family="gaussian"(link="identity"),data=to.model)
+
+
+##### Plot checks ########
+
+
+to.plot <- to.model %>% filter(agegroup %in% c("3","4","5","6","7")) %>% 
+  mutate(agegroup=factor(as.character(agegroup),levels=c("3","4","5","6","7"),labels=c("Age group 25-29 years","Age group 30-34 years","Age group 35-39 years","Age group 40-44 years","Age group 45-49 years")))
+
+
+ggplot(to.plot, aes(x = hiv1990, y = corr)) + 
+  geom_point()+
+  facet_wrap(~agegroup,ncol=3,scales = "free_x") + 
+  theme_classic() + 
+  theme(legend.position="none",
+        strip.background = element_blank()) +
+  xlab("HIV prevalence in 1990")+
+  ylab("Bias")+
+  coord_cartesian()
+
+ggplot(to.plot, aes(x = hiv2010, y = corr)) + 
+  geom_point()+
+  facet_wrap(~agegroup,ncol=3,scales = "free_x") + 
+  theme_classic() + 
+  theme(legend.position="none",
+        strip.background = element_blank()) +
+  xlab("HIV prevalence in 2010")+
+  ylab("Bias")+
+  coord_cartesian()
+
 
 ##### Figure 4 #####
 
