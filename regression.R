@@ -1,3 +1,10 @@
+if(!require(glmnet)){
+  install.packages("glmnet",dependencies = TRUE,repos='http://cran.us.r-project.org')
+}
+
+
+require(glmnet)
+
 if(!require(officer)){
   install.packages("officer",dependencies = TRUE,repos='http://cran.us.r-project.org')
 }
@@ -65,6 +72,117 @@ to.model <- nbd2k %>% mutate(
 
 full.model.formula <- corr ~ fiveq0_surv + agegroup + agegroup*hiv1990 + agegroup*hiv2000+  agegroup*hiv2010 + 
   agegroup*art_prev2005+ agegroup*art_prev2007+ agegroup*art_prev2009 + tfr2000 + tfr2010
+
+
+##### LASSO #####
+
+# Set random seed
+set.seed(100)
+
+# Rows used for training in out-of-sample
+train.index <- sample(1:nrow(to.model),replace = FALSE,size=round(nrow(to.model)*0.8))
+
+# Rows used for prediction in out-of-sample
+
+predict.index <- setdiff(1:nrow(to.model),train.index)
+
+# Get output vector for glmnet
+
+y <- to.model %>% pull(all.vars(full.model.formula)[1])
+
+# Dummy vars for agegroup
+
+agegroup.f <- to.model$agegroup
+
+agegroup.dummy <- model.matrix(~agegroup.f) %>% as.data.frame() %>% select(-`(Intercept)`)
+
+# Get predictors for glmnet
+
+x <- bind_cols(to.model,agegroup.dummy) %>% select_if(.predicate = funs(!is.factor(.))) %>% select(one_of(all.vars(full.model.formula)[-1])) %>% as.matrix()
+
+# Compute errors table
+
+errors <- lapply(c(0,0.5,1.0,NA),function(alpha){
+  lapply(c("in-sample","out-of-sample"),function(sample){
+
+    # Which rows are we using to fit and predict?
+    
+    to.fit.index <- 1:nrow(to.model)
+    
+    to.predict.index <- 1:nrow(to.model)
+    
+    
+    if(sample=="out-of-sample"){
+      
+      to.fit.index <- train.index
+      
+      to.predict.index <- predict.index
+      
+    }
+    
+    
+      
+    if(is.na(alpha)){ # Full model
+     
+      fit <- lm(full.model.formula,data=to.model[to.fit.index,])
+       
+      prediction <- predict(fit,newx = to.model[to.predict.index])
+    }else{ # glmnet
+      fit <- cv.glmnet(x[to.fit.index,],y[to.fit.index],family="gaussian",alpha=alpha)
+      
+      prediction <- predict(fit,newx = x[to.predict.index,],s = "lambda.min")
+    }  
+    
+    # Absolute error
+    abs.error <- abs(y[to.predict.index]-prediction)
+    
+    # Relative error
+    relative.error <- abs.error/abs(y[to.predict.index])
+    
+    # Root mean square error
+    
+    rmse <- sqrt(mean(abs.error^2))
+    
+    # Root median square error
+    
+    rmedse <- sqrt(median(abs.error^2))
+    
+    # Mean relative error
+    
+    mre <- mean(Filter(function(x) !is.infinite(x),relative.error),na.rm=TRUE)
+    
+    # Median relative error
+    
+    medre <- median(relative.error)
+    
+    # Return a data.frame
+    data.frame(alpha=alpha,sample=sample,rmse=rmse,rmedse=rmedse,mre=mre,medre=medre,stringsAsFactors = FALSE)
+    
+  }) %>% bind_rows()
+}) %>% bind_rows()
+
+# Print the table
+
+ft <- errors  %>% 
+  mutate(alpha=case_when(is.na(alpha)~"full model", TRUE ~as.character(alpha))) %>%
+  mutate_at(vars(one_of("rmse","rmedse")),funs(sprintf("%0.6f",.))) %>%
+  flextable() %>% set_header_labels(rmse="Root mean\nsquare error",
+                                    rmedse="Root median\nsquare error",
+                                    mre="Mean relative\nerror",
+                                    medre="Median relative\nerror") %>%
+  merge_v(j=1)
+
+  doc <- read_docx() %>%
+  body_add_par(value = "Model selection.", style = "table title") %>% 
+  body_add_flextable(ft)
+
+
+
+
+print(doc,"./tables/model_selection.docx")
+
+
+##### Forward and backward selection #####
 
 minimum.model.formula <- corr ~ fiveq0_surv
 
