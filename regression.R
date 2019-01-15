@@ -1,3 +1,19 @@
+
+if(!require(data.table)){
+  install.packages("data.table",dependencies = TRUE,repos='http://cran.us.r-project.org')
+}
+
+
+require(data.table)
+
+
+if(!require(pls)){
+  install.packages("pls",dependencies = TRUE,repos='http://cran.us.r-project.org')
+}
+
+
+require(pls)
+
 if(!require(glmnet)){
   install.packages("glmnet",dependencies = TRUE,repos='http://cran.us.r-project.org')
 }
@@ -73,477 +89,107 @@ to.model <- nbd2k %>% mutate(
 full.model.formula <- corr ~ fiveq0_surv + agegroup + agegroup*hiv1990 + agegroup*hiv2000+  agegroup*hiv2010 + 
   agegroup*art_prev2005+ agegroup*art_prev2007+ agegroup*art_prev2009 + tfr2000 + tfr2010
 
+##### PCR #####
 
-
-
-##### LASSO #####
-
-# Set random seed
 set.seed(100)
+best.fitting.model <- pcr(full.model.formula,data=to.model,scale=TRUE,validation="CV", jackknife=TRUE)
 
-# Rows used for training in out-of-sample
-train.index <- sample(1:nrow(to.model),replace = FALSE,size=round(nrow(to.model)*0.8))
-
-# Rows used for prediction in out-of-sample
-
-predict.index <- setdiff(1:nrow(to.model),train.index)
-
-# Get output vector for glmnet
-
-y <- to.model %>% pull(all.vars(full.model.formula)[1])
+ncomp <- 20
 
 
-# Get predictors for glmnet
+# To use later to compute prediction intervals
 
-x <- model.matrix(full.model.formula,to.model)
+# Compute covariance of the PCR regression coefficients (Faver & Kowalski, 1997,PROPAGATION OF MEASUREMENT ERRORS FOR THE VALIDATION OF PREDICTIONS OBTAINED BY PRINCIPAL COMPONENT REGRESSION AND PARTIAL LEAST SQUARES)
 
+x <- prcomp(model.matrix(best.fitting.model),scale. = TRUE)
 
+cv <- 0
 
-#%>% as.matrix()
+for(i in 1:9){
+  
+  ev <-  x$sdev[i]^2
+  
+  r <- as.matrix(x$rotation)[,i,drop=FALSE]
+  
+  cv <- cv+1/ev*r%*%t(r)
+  
+}
 
-# Compute errors table
+# sqrt of the variance of the measurement errors
 
-errors <- lapply(c(0,0.5,1.0,NA),function(alpha){
-  lapply(c("in-sample","out-of-sample"),function(sample){
+s <- sd(residuals(best.fitting.model,ncomp=ncomp))
 
-    # Which rows are we using to fit and predict?
-    
-    to.fit.index <- 1:nrow(to.model)
-    
-    to.predict.index <- 1:nrow(to.model)
-    
-    
-    if(sample=="out-of-sample"){
-      
-      to.fit.index <- train.index
-      
-      to.predict.index <- predict.index
-      
-    }
-    
-    
-      
-    if(is.na(alpha)){ # Full model
-     
-      fit <- lm(full.model.formula,data=to.model[to.fit.index,])
-       
-      prediction <- predict(fit,newx = to.model[to.predict.index])
-    }else{ # glmnet
-      fit <- cv.glmnet(x[to.fit.index,],y[to.fit.index],family="gaussian",alpha=alpha)
-      
-      prediction <- predict(fit,newx = x[to.predict.index,],s = "lambda.min")
-    }  
-    
-    # Absolute error
-    abs.error <- abs(y[to.predict.index]-prediction)
-    
-    # Relative error
-    relative.error <- abs.error/abs(y[to.predict.index])
-    
-    # Root mean square error
-    
-    rmse <- sqrt(mean(abs.error^2))
-    
-    # Root median square error
-    
-    rmedse <- sqrt(median(abs.error^2))
-    
-    # Mean relative error
-    
-    mre <- mean(Filter(function(x) !is.infinite(x),relative.error),na.rm=TRUE)
-    
-    # Median relative error
-    
-    medre <- median(relative.error)
-    
-    # Return a data.frame
-    data.frame(alpha=alpha,sample=sample,rmse=rmse,rmedse=rmedse,mre=mre,medre=medre,stringsAsFactors = FALSE)
-    
-  }) %>% bind_rows()
-}) %>% bind_rows()
+# Degrees of freedom (Faver & Kowalski, 1997)
 
-# Print the table
+df <- nrow(to.model) - ncomp -1
 
-ft <- errors  %>% 
-  mutate(alpha=case_when(is.na(alpha)~"full model", TRUE ~as.character(alpha))) %>%
-  mutate_at(vars(one_of("rmse","rmedse")),funs(sprintf("%0.6f",.))) %>%
-  flextable() %>% set_header_labels(rmse="Root mean\nsquare error",
-                                    rmedse="Root median\nsquare error",
-                                    mre="Mean relative\nerror",
-                                    medre="Median relative\nerror") %>%
-  merge_v(j=1)
+# t value for the 0.05 CI interval (Faver & Kowalski, 1997)
 
-  doc <- read_docx() %>%
-  body_add_par(value = "Model selection.", style = "table title") %>% 
-  body_add_flextable(ft)
+t <- dt(0.025,df)
+
+# summary(best.fitting.model)
+# Data: 	X dimension: 31360 51 
+# Y dimension: 31360 1
+# Fit method: svdpc
+# Number of components considered: 51
+# 
+# VALIDATION: RMSEP
+# Cross-validated using 10 random segments.
+# (Intercept)  1 comps   2 comps   3 comps   4 comps   5 comps   6 comps   7 comps   8 comps   9 comps  10 comps
+# CV         0.01261  0.01036  0.009542  0.009206  0.009023  0.008446  0.008142  0.008122  0.006469  0.006094  0.006079
+# adjCV      0.01261  0.01036  0.009542  0.009450  0.008474  0.008221  0.008141  0.008121  0.006469  0.006094  0.006102
+# 11 comps  12 comps  13 comps  14 comps  15 comps  16 comps  17 comps  18 comps  19 comps  20 comps  21 comps
+# CV     0.006063  0.006053  0.006029  0.005819  0.005417  0.004444  0.004323  0.004234  0.004095   0.00399  0.003841
+# adjCV  0.006100  0.006089  0.006031  0.005818  0.005417  0.004443  0.004331  0.004098  0.004089   0.00399  0.003841
+# 22 comps  23 comps  24 comps  25 comps  26 comps  27 comps  28 comps  29 comps  30 comps  31 comps  32 comps
+# CV     0.003834  0.003824  0.003819  0.003815  0.003567  0.003532  0.003216  0.003207  0.003126  0.003104  0.003072
+# adjCV  0.003840  0.003840  0.003828  0.003818  0.003567  0.003531  0.003216  0.003207  0.003125  0.003124  0.003078
+# 33 comps  34 comps  35 comps  36 comps  37 comps  38 comps  39 comps  40 comps  41 comps  42 comps  43 comps
+# CV      0.00305  0.003031  0.002996  0.002996  0.002996  0.002995  0.002995  0.002993  0.002993   0.00298  0.002978
+# adjCV   0.00307  0.003039  0.002996  0.002996  0.002996  0.002996  0.002995  0.002995  0.002993   0.00298  0.002978
+# 44 comps  45 comps  46 comps  47 comps  48 comps  49 comps  50 comps  51 comps
+# CV     0.002978  0.002978  0.002977  0.002977  0.002977  0.002977  0.002977  0.002977
+# adjCV  0.002978  0.002977  0.002976  0.002976  0.002977  0.002977  0.002977  0.002977
+# 
+# TRAINING: % variance explained
+# 1 comps  2 comps  3 comps  4 comps  5 comps  6 comps  7 comps  8 comps  9 comps  10 comps  11 comps  12 comps
+# X       13.47    24.62    35.48    46.34    57.20    68.06    71.94    75.12    77.64     80.01     82.38     84.75
+# corr    32.54    42.73    44.40    55.50    57.61    58.34    58.55    73.70    76.68     76.69     76.69     76.78
+# 13 comps  14 comps  15 comps  16 comps  17 comps  18 comps  19 comps  20 comps  21 comps  22 comps  23 comps
+# X        87.12     89.44     90.97     91.94     92.81     93.67     94.54     95.41     96.27     96.84     97.42
+# corr     77.20     78.74     81.57     87.61     88.24     89.50     89.50     90.07     90.74     90.74     90.74
+# 24 comps  25 comps  26 comps  27 comps  28 comps  29 comps  30 comps  31 comps  32 comps  33 comps  34 comps
+# X        98.00     98.58     99.14     99.37     99.52     99.61     99.68     99.73     99.78     99.84     99.89
+# corr     90.81     90.86     92.02     92.18     93.51     93.55     93.87     93.88     94.06     94.09     94.22
+# 35 comps  36 comps  37 comps  38 comps  39 comps  40 comps  41 comps  42 comps  43 comps  44 comps  45 comps
+# X        99.95     99.96     99.97     99.97     99.98     99.98     99.99     99.99    100.00    100.00    100.00
+# corr     94.37     94.37     94.37     94.37     94.38     94.38     94.39     94.43     94.44     94.44     94.44
+# 46 comps  47 comps  48 comps  49 comps  50 comps  51 comps
+# X       100.00    100.00    100.00    100.00    100.00    100.00
+# corr     94.45     94.45     94.45     94.45     94.45     94.45
 
 
 
 
+# Coefficients table
+
+# WARNING
+# The jackknife variance estimates are known to be biased (see var.jack). Also, the distribution 
+# of the regression coefficient estimates and the jackknife variance estimates are unknown (at least in PLSR/PCR). 
+# Consequently, the distribution (and in particular, the degrees of freedom) of the resulting t statistics is unknown. 
+# The present code simply assumes a t distribution with m - 1 degrees of freedom, where m is the number of cross-validation segments.
+# Therefore, the resulting p values should not be used uncritically, and should perhaps be regarded as mere indicator of (non-)significance.
+
+ft <- jack.test(best.fitting.model,ncomp = ncomp) %$% data.frame(coefficients,sd,tvalues,pvalues)  %>% mutate(var=rownames(.)) %>% set_colnames(c("coef","se","t","p.value","var")) %>% mutate_if(is.numeric,funs(sprintf("%0.6f",.))) %>%  select(var,everything()) %>% flextable()
+
+doc <- read_docx() %>%
+  body_add_par(value = paste("PCR. ncomp=",ncomp), style = "table title") %>% 
+  body_add_flextable(ft) %>%
+  body_add_par(value = "WARNING: The jackknife variance estimates are known to be biased (see var.jack). Also, the distribution of the regression coefficient estimates and the jackknife variance estimates are unknown (at least in PLSR/PCR).Consequently, the distribution (and in particular, the degrees of freedom) of the resulting t statistics is unknown. The present code simply assumes a t distribution with m - 1 degrees of freedom, where m is the number of cross-validation segments. Therefore, the resulting p values should not be used uncritically, and should perhaps be regarded as mere indicator of (non-)significance.")
+
+print(doc,"./tables/PCR_coefs.docx")
 
 
-
-# Use alpha=1 for the final model
-
-alpha <- 0.5 
-
-best.fitting.model <- cv.glmnet(x,y,family="gaussian",alpha=alpha)
-
-ft <- coef.cv.glmnet(best.fitting.model, s = "lambda.min", exact = TRUE,x=x,y=y) %>% 
-  as.matrix %>% as.data.frame() %>% 
-  set_colnames("coef") %>% 
-  mutate(var=rownames(.)) %>% 
-  select(var,coef) %>% 
-  filter(coef!=0) %>% 
-  mutate(coef=sprintf("%0.5f",coef)) %>%
-  flextable()
-
-
-doc %<>% body_add_break() %>% body_add_par(value = paste("Model coefficients for alpha=",alpha), style = "table title") %>% 
-  body_add_flextable(ft)
-
-print(doc,"./tables/model_selection.docx")
-
-# ##### Forward and backward selection #####
-# 
-# minimum.model.formula <- corr ~ fiveq0_surv
-# 
-# 
-# # Forward selection
-# 
-# # maximum model
-# 
-# model.max <- glm(formula=full.model.formula,
-#                    family = "gaussian"(link="identity"), data=to.model)
-# 
-# 
-# 
-# # minimum model
-# 
-# model.min <- glm(formula=minimum.model.formula, family = "gaussian"(link="identity"), data=to.model)
-# 
-# forward.BIC <- step(object=model.min, scope=list(upper=model.max,lower=~1), direction="forward",k=log(nrow(to.model)))
-# 
-# # Step:  AIC=-275402.2
-# # corr ~ fiveq0_surv + hiv2000 + agegroup + hiv1990 + hiv2010 + 
-# #   hiv2000:agegroup + agegroup:hiv1990 + agegroup:hiv2010
-# # 
-# # Df Deviance     AIC
-# # <none>             0.27910 -275402
-# # + art_prev2009  1  0.27901 -275402
-# # + art_prev2007  1  0.27902 -275401
-# # + art_prev2005  1  0.27904 -275398
-# # + tfr2000       1  0.27906 -275396
-# # + tfr2010       1  0.27907 -275396
-# 
-# # Call:  glm(formula = corr ~ fiveq0_surv + hiv2000 + agegroup + hiv1990 + 
-# #              hiv2010 + hiv2000:agegroup + agegroup:hiv1990 + agegroup:hiv2010, 
-# #            family = gaussian(link = "identity"), data = to.model)
-# # 
-# # Coefficients:
-# #   (Intercept)        fiveq0_surv            hiv2000          agegroup2          agegroup3          agegroup4  
-# # 1.334e-03         -1.094e-02          9.672e-03         -1.837e-05          2.085e-04          2.855e-04  
-# # agegroup5          agegroup6          agegroup7            hiv1990            hiv2010  hiv2000:agegroup2  
-# # 4.213e-04          5.738e-04          9.499e-04         -5.711e-03          2.534e-04         -7.414e-03  
-# # hiv2000:agegroup3  hiv2000:agegroup4  hiv2000:agegroup5  hiv2000:agegroup6  hiv2000:agegroup7  agegroup2:hiv1990  
-# # 2.328e-02          8.033e-02          1.177e-01          8.658e-02          5.920e-02          8.408e-03  
-# # agegroup3:hiv1990  agegroup4:hiv1990  agegroup5:hiv1990  agegroup6:hiv1990  agegroup7:hiv1990  agegroup2:hiv2010  
-# # -4.207e-04         -9.773e-03          3.373e-02          1.083e-01          1.085e-01          7.824e-03  
-# # agegroup3:hiv2010  agegroup4:hiv2010  agegroup5:hiv2010  agegroup6:hiv2010  agegroup7:hiv2010  
-# # 9.686e-03          3.414e-03         -1.158e-02         -2.374e-02         -2.875e-02  
-# # 
-# # Degrees of Freedom: 31359 Total (i.e. Null);  31331 Residual
-# # Null Deviance:	    4.986 
-# # Residual Deviance: 0.2791 	AIC: -275600
-# 
-# forward.AIC <- step(object=model.min, scope=list(upper=model.max,lower=~1), direction="forward",k=2)
-# 
-# # Step:  AIC=-275868
-# # corr ~ fiveq0_surv + hiv2000 + agegroup + hiv1990 + hiv2010 + 
-# #   art_prev2009 + art_prev2005 + art_prev2007 + tfr2000 + tfr2010 + 
-# #   hiv2000:agegroup + agegroup:hiv1990 + agegroup:hiv2010 + 
-# #   agegroup:art_prev2009 + agegroup:art_prev2005 + agegroup:art_prev2007
-# 
-# # Call:  glm(formula = corr ~ fiveq0_surv + hiv2000 + agegroup + hiv1990 + 
-# #              hiv2010 + art_prev2009 + art_prev2005 + art_prev2007 + tfr2000 + 
-# #              tfr2010 + hiv2000:agegroup + agegroup:hiv1990 + agegroup:hiv2010 + 
-# #              agegroup:art_prev2009 + agegroup:art_prev2005 + agegroup:art_prev2007, 
-# #            family = gaussian(link = "identity"), data = to.model)
-# # 
-# # Coefficients:
-# #   (Intercept)             fiveq0_surv                 hiv2000               agegroup2               agegroup3  
-# # 2.526e-04              -1.093e-02               1.194e-02              -1.908e-05               1.912e-04  
-# # agegroup4               agegroup5               agegroup6               agegroup7                 hiv1990  
-# # 2.735e-04               4.575e-04               6.514e-04               9.996e-04              -5.359e-03  
-# # hiv2010            art_prev2009            art_prev2005            art_prev2007                 tfr2000  
-# # -1.989e-03               4.657e-02               3.238e-01              -1.449e-01               1.538e-03  
-# # tfr2010       hiv2000:agegroup2       hiv2000:agegroup3       hiv2000:agegroup4       hiv2000:agegroup5  
-# # -1.538e-03              -7.493e-03               2.454e-02               8.274e-02               1.189e-01  
-# # hiv2000:agegroup6       hiv2000:agegroup7       agegroup2:hiv1990       agegroup3:hiv1990       agegroup4:hiv1990  
-# # 8.387e-02               5.622e-02               8.440e-03              -4.261e-04              -1.011e-02  
-# # agegroup5:hiv1990       agegroup6:hiv1990       agegroup7:hiv1990       agegroup2:hiv2010       agegroup3:hiv2010  
-# # 3.288e-02               1.077e-01               1.083e-01               7.896e-03               7.513e-03  
-# # agegroup4:hiv2010       agegroup5:hiv2010       agegroup6:hiv2010       agegroup7:hiv2010  agegroup2:art_prev2009  
-# # 4.431e-04              -1.138e-02              -1.772e-02              -2.285e-02              -1.678e-02  
-# # agegroup3:art_prev2009  agegroup4:art_prev2009  agegroup5:art_prev2009  agegroup6:art_prev2009  agegroup7:art_prev2009  
-# # 1.002e-01               2.512e-01               3.348e-01               2.249e-02              -2.419e-01  
-# # agegroup2:art_prev2005  agegroup3:art_prev2005  agegroup4:art_prev2005  agegroup5:art_prev2005  agegroup6:art_prev2005  
-# # -1.601e-01              -1.329e+00              -1.671e-01               5.277e+00               8.260e+00  
-# # agegroup7:art_prev2005  agegroup2:art_prev2007  agegroup3:art_prev2007  agegroup4:art_prev2007  agegroup5:art_prev2007  
-# # 3.982e+00               6.677e-02               1.116e-01              -4.431e-01              -1.812e+00  
-# # agegroup6:art_prev2007  agegroup7:art_prev2007  
-# # -1.883e+00              -4.572e-01  
-# # 
-# # Degrees of Freedom: 31359 Total (i.e. Null);  31308 Residual
-# # Null Deviance:	    4.986 
-# # Residual Deviance: 0.2767 	AIC: -275900
-# 
-# 
-# # Backward selection
-# 
-# 
-# back.BIC <- step(model.max, direction="backward",k=log(nrow(to.model)))
-# 
-# # Step:  AIC=-275483.8
-# # corr ~ fiveq0_surv + agegroup + hiv1990 + hiv2000 + hiv2010 + 
-# #   art_prev2005 + art_prev2007 + tfr2000 + tfr2010 + agegroup:hiv1990 + 
-# #   agegroup:hiv2000 + agegroup:hiv2010 + agegroup:art_prev2005 + 
-# #   agegroup:art_prev2007
-# # 
-# # Df Deviance     AIC
-# # <none>                      0.27691 -275484
-# # - tfr2010                1  0.27707 -275476
-# # - tfr2000                1  0.27707 -275476
-# # - agegroup:art_prev2005  6  0.27815 -275406
-# # - agegroup:art_prev2007  6  0.27820 -275400
-# # - agegroup:hiv2010       6  0.27996 -275202
-# # - fiveq0_surv            1  0.30530 -272433
-# # - agegroup:hiv2000       6  0.36206 -267138
-# # - agegroup:hiv1990       6  0.61191 -250680
-# 
-# # Call:  glm(formula = corr ~ fiveq0_surv + agegroup + hiv1990 + hiv2000 + 
-# #              hiv2010 + art_prev2005 + art_prev2007 + tfr2000 + tfr2010 + 
-# #              agegroup:hiv1990 + agegroup:hiv2000 + agegroup:hiv2010 + 
-# #              agegroup:art_prev2005 + agegroup:art_prev2007, family = gaussian(link = "identity"), 
-# #            data = to.model)
-# # 
-# # Coefficients:
-# #   (Intercept)             fiveq0_surv               agegroup2               agegroup3  
-# # 2.321e-04              -1.093e-02              -1.935e-05               1.927e-04  
-# # agegroup4               agegroup5               agegroup6               agegroup7  
-# # 2.775e-04               4.629e-04               6.519e-04               9.960e-04  
-# # hiv1990                 hiv2000                 hiv2010            art_prev2005  
-# # -5.297e-03               1.175e-02              -1.633e-03               1.729e-01  
-# # art_prev2007                 tfr2000                 tfr2010       agegroup2:hiv1990  
-# # -2.763e-02               1.587e-03              -1.590e-03               8.421e-03  
-# # agegroup3:hiv1990       agegroup4:hiv1990       agegroup5:hiv1990       agegroup6:hiv1990  
-# # -3.128e-04              -9.826e-03               3.325e-02               1.077e-01  
-# # agegroup7:hiv1990       agegroup2:hiv2000       agegroup3:hiv2000       agegroup4:hiv2000  
-# # 1.081e-01              -7.399e-03               2.397e-02               8.133e-02  
-# # agegroup5:hiv2000       agegroup6:hiv2000       agegroup7:hiv2000       agegroup2:hiv2010  
-# # 1.170e-01               8.374e-02               5.758e-02               7.742e-03  
-# # agegroup3:hiv2010       agegroup4:hiv2010       agegroup5:hiv2010       agegroup6:hiv2010  
-# # 8.430e-03               2.741e-03              -8.319e-03              -1.751e-02  
-# # agegroup7:hiv2010  agegroup2:art_prev2005  agegroup3:art_prev2005  agegroup4:art_prev2005  
-# # -2.507e-02              -1.014e-01              -1.680e+00              -1.046e+00  
-# # agegroup5:art_prev2005  agegroup6:art_prev2005  agegroup7:art_prev2005  agegroup2:art_prev2007  
-# # 4.105e+00               8.182e+00               4.829e+00               2.357e-02  
-# # agegroup3:art_prev2007  agegroup4:art_prev2007  agegroup5:art_prev2007  agegroup6:art_prev2007  
-# # 3.696e-01               2.038e-01              -9.496e-01              -1.825e+00  
-# # agegroup7:art_prev2007  
-# # -1.080e+00  
-# # 
-# # Degrees of Freedom: 31359 Total (i.e. Null);  31315 Residual
-# # Null Deviance:	    4.986 
-# # Residual Deviance: 0.2769 	AIC: -275900
-# 
-# back.AIC <- step(model.max, direction="backward",k=2)
-# 
-# # Start:  AIC=-275868
-# # corr ~ fiveq0_surv + agegroup + agegroup * hiv1990 + agegroup * 
-# #   hiv2000 + agegroup * hiv2010 + agegroup * art_prev2005 + 
-# #   agegroup * art_prev2007 + agegroup * art_prev2009 + tfr2000 + 
-# #   tfr2010
-# # 
-# # Df Deviance     AIC
-# # <none>                      0.27671 -275868
-# # - agegroup:art_prev2009  6  0.27685 -275864
-# # - tfr2010                1  0.27686 -275853
-# # - tfr2000                1  0.27686 -275853
-# # - agegroup:art_prev2007  6  0.27705 -275842
-# # - agegroup:art_prev2005  6  0.27763 -275776
-# # - agegroup:hiv2010       6  0.27869 -275657
-# # - fiveq0_surv            1  0.30510 -272808
-# # - agegroup:hiv2000       6  0.34308 -269138
-# # - agegroup:hiv1990       6  0.59981 -251619
-# 
-# # Call:  glm(formula = corr ~ fiveq0_surv + agegroup + agegroup * hiv1990 + 
-# #              agegroup * hiv2000 + agegroup * hiv2010 + agegroup * art_prev2005 + 
-# #              agegroup * art_prev2007 + agegroup * art_prev2009 + tfr2000 + 
-# #              tfr2010, family = gaussian(link = "identity"), data = to.model)
-# # 
-# # Coefficients:
-# #   (Intercept)             fiveq0_surv               agegroup2               agegroup3  
-# # 2.526e-04              -1.093e-02              -1.908e-05               1.912e-04  
-# # agegroup4               agegroup5               agegroup6               agegroup7  
-# # 2.735e-04               4.575e-04               6.514e-04               9.996e-04  
-# # hiv1990                 hiv2000                 hiv2010            art_prev2005  
-# # -5.359e-03               1.194e-02              -1.989e-03               3.238e-01  
-# # art_prev2007            art_prev2009                 tfr2000                 tfr2010  
-# # -1.449e-01               4.657e-02               1.538e-03              -1.538e-03  
-# # agegroup2:hiv1990       agegroup3:hiv1990       agegroup4:hiv1990       agegroup5:hiv1990  
-# # 8.440e-03              -4.261e-04              -1.011e-02               3.288e-02  
-# # agegroup6:hiv1990       agegroup7:hiv1990       agegroup2:hiv2000       agegroup3:hiv2000  
-# # 1.077e-01               1.083e-01              -7.493e-03               2.454e-02  
-# # agegroup4:hiv2000       agegroup5:hiv2000       agegroup6:hiv2000       agegroup7:hiv2000  
-# # 8.274e-02               1.189e-01               8.387e-02               5.622e-02  
-# # agegroup2:hiv2010       agegroup3:hiv2010       agegroup4:hiv2010       agegroup5:hiv2010  
-# # 7.896e-03               7.513e-03               4.431e-04              -1.138e-02  
-# # agegroup6:hiv2010       agegroup7:hiv2010  agegroup2:art_prev2005  agegroup3:art_prev2005  
-# # -1.772e-02              -2.285e-02              -1.601e-01              -1.329e+00  
-# # agegroup4:art_prev2005  agegroup5:art_prev2005  agegroup6:art_prev2005  agegroup7:art_prev2005  
-# # -1.671e-01               5.277e+00               8.260e+00               3.982e+00  
-# # agegroup2:art_prev2007  agegroup3:art_prev2007  agegroup4:art_prev2007  agegroup5:art_prev2007  
-# # 6.677e-02               1.116e-01              -4.431e-01              -1.812e+00  
-# # agegroup6:art_prev2007  agegroup7:art_prev2007  agegroup2:art_prev2009  agegroup3:art_prev2009  
-# # -1.883e+00              -4.572e-01              -1.678e-02               1.002e-01  
-# # agegroup4:art_prev2009  agegroup5:art_prev2009  agegroup6:art_prev2009  agegroup7:art_prev2009  
-# # 2.512e-01               3.348e-01               2.249e-02              -2.419e-01  
-# # 
-# # Degrees of Freedom: 31359 Total (i.e. Null);  31308 Residual
-# # Null Deviance:	    4.986 
-# # Residual Deviance: 0.2767 	AIC: -275900
-# 
-# formula(forward.AIC)
-# 
-# model.formula.selected.1 <- formula(back.AIC)
-# 
-# # corr ~ fiveq0_surv + agegroup + agegroup * hiv1990 + agegroup * 
-# #   hiv2000 + agegroup * hiv2010 + agegroup * art_prev2005 + 
-# #   agegroup * art_prev2007 + agegroup * art_prev2009 + tfr2000 + 
-# #   tfr2010
-# 
-# 
-# model.formula.selected.2 <- update(model.formula.selected.1, ~. - agegroup:art_prev2009)
-# 
-# # corr ~ fiveq0_surv + agegroup + hiv1990 + hiv2000 + hiv2010 + 
-# #   art_prev2005 + art_prev2007 + art_prev2009 + tfr2000 + tfr2010 + 
-# #   agegroup:hiv1990 + agegroup:hiv2000 + agegroup:hiv2010 + 
-# #   agegroup:art_prev2005 + agegroup:art_prev2007
-# 
-# 
-# model.formula.selected.3 <- update(model.formula.selected.1, ~. - tfr2010)
-# 
-# model.selected.1 <- glm(model.formula.selected.1,family="gaussian"(link="identity"),data=to.model)
-# model.selected.2 <- glm(model.formula.selected.2,family="gaussian"(link="identity"),data=to.model)
-# model.selected.3 <- glm(model.formula.selected.3,family="gaussian"(link="identity"),data=to.model)
-# 
-# # In-sample comparison
-# 
-# # Root mean absolute error
-# 
-# e0 <- model.max$fitted.values-(to.model$corr)
-# e1 <- model.selected.1$fitted.values-(to.model$corr)
-# e2 <- model.selected.2$fitted.values-(to.model$corr)
-# e3 <- model.selected.3$fitted.values-(to.model$corr)
-# 
-# mean(e0^2)^.5
-# # [1] 0.002970475
-# mean(e1^2)^.5
-# # [1] 0.002970475
-# mean(e2^2)^.5
-# # [1] 0.002971231
-# mean(e3^2)^.5
-# # [1] 0.002971265
-# 
-# # root mean relative error
-# 
-# e0r <- e0/to.model$corr
-# e1r <- e1/to.model$corr
-# e2r <- e2/to.model$corr
-# e3r <- e3/to.model$corr
-# 
-# mean(e0r^2)^.5
-# # Inf
-# mean(e1r^2)^.5
-# # Inf
-# mean(e2r^2)^.5
-# # Inf
-# mean(e3r^2)^.5
-# # Inf
-# 
-# var(e0)^.5
-# # [1] 0.002970522
-# var(e1)^.5
-# # [1] 0.002970522
-# var(e2)^.5
-# # [1] 0.002971279
-# var(e3)^.5
-# # [1] 0.002971312
-# 
-# 
-# # Out of sample
-# 
-# fullsamp <- unique(to.model$i)
-# 
-# set.seed(400)
-# 
-# # dataset with 80% of full sample
-# ns1 <- sample(fullsamp, length(fullsamp)*.8, replace=FALSE)
-# 
-# # Select those i's from nbd2k
-# 
-# sample1 <- to.model %>% filter(i %in% ns1)
-# 
-# # dataset with 20% of full sample
-# tw1 <- setdiff(fullsamp,ns1)
-# 
-# sample2 <- to.model %>% filter(i %in% tw1)
-# 
-# # Take same models used in in-sample tests
-# 
-# full.model_sample1 <- glm(formula=full.model.formula,family = "gaussian"(link="identity"), data=sample1)
-# model.selected.1_sample1 <- glm(model.formula.selected.1,family="gaussian"(link="identity"),data=sample1)
-# model.selected.2_sample1 <- glm(model.formula.selected.2,family="gaussian"(link="identity"),data=sample1)
-# model.selected.3_sample1 <- glm(model.formula.selected.3,family="gaussian"(link="identity"),data=sample1)
-# 
-# 
-# pcorr.full.model <- predict(full.model_sample1,sample2,interval="predict",level=.95) # "predict" is the appropriate interval for individual prediction (rather than mean)
-# pcorr.model.1 <- predict(model.selected.1_sample1,sample2,interval="predict",level=.95) # "predict" is the appropriate interval for individual prediction (rather than mean)
-# pcorr.model.2 <- predict(model.selected.2_sample1,sample2,interval="predict",level=.95) # "predict" is the appropriate interval for individual prediction (rather than mean)
-# pcorr.model.3 <- predict(model.selected.3_sample1,sample2,interval="predict",level=.95) # "predict" is the appropriate interval for individual prediction (rather than mean)
-# 
-# 
-# e.full.model <- pcorr.full.model-(sample2$corr)
-# e.model.1 <- pcorr.model.1-(sample2$corr)
-# e.model.2 <- pcorr.model.2-(sample2$corr)
-# e.model.3 <- pcorr.model.3-(sample2$corr)
-# 
-# # Root mean squared absolute error
-# 
-# mean(e.full.model^2)^.5
-# # 0.00292759
-# mean(e.model.1^2)^.5
-# # 0.00292759
-# mean(e.model.2)^.5
-# # 0.01186993
-# mean(e.model.3^2)^.5
-# # 0.00292356
-# 
-# 
-# # model 3 is the best one in out-of-sample
-# 
-# # corr ~ fiveq0_surv + agegroup + hiv1990 + hiv2000 + hiv2010 + 
-# #   art_prev2005 + art_prev2007 + art_prev2009 + tfr2000 + agegroup:hiv1990 + 
-# #   agegroup:hiv2000 + agegroup:hiv2010 + agegroup:art_prev2005 + 
-# #   agegroup:art_prev2007 + agegroup:art_prev2009
-# 
-# 
-# best.fitting.model.formula <- model.formula.selected.3
-# 
-# 
-# best.fitting.model <- glm(best.fitting.model.formula,family="gaussian"(link="identity"),data=to.model)
-# 
 
 ##### Plot checks ########
 
@@ -589,11 +235,12 @@ other_vars <- to.model %>% summarise_if(is.numeric,mean)
 
 # Compute prediction
 
-newx <- bind_cols(to.plot,other_vars[rep(1,nrow(to.plot)),]) %>% select(one_of(all.vars(full.model.formula))) %>% model.matrix(full.model.formula,data=.)
+newx <- bind_cols(to.plot,other_vars[rep(1,nrow(to.plot)),]) %>% select(one_of(all.vars(full.model.formula))) 
 
 
 
-prediction <- predict(best.fitting.model, newx = newx, type = "link",se=TRUE) %>% as.data.frame %>% set_colnames("fit")
+
+prediction <- predict(best.fitting.model,newdata = newx, type = "response",se=TRUE,ncomp = ncomp) %>% as.data.frame %>% set_colnames("fit")
 
 
 
@@ -637,11 +284,11 @@ other_vars <- to.model %>% summarise_if(is.numeric,mean)
 
 # Compute prediction
 
-newx <- bind_cols(to.plot,other_vars[rep(1,nrow(to.plot)),]) %>% select(one_of(all.vars(full.model.formula))) %>% model.matrix(full.model.formula,data=.)
+newx <- bind_cols(to.plot,other_vars[rep(1,nrow(to.plot)),]) %>% select(one_of(all.vars(full.model.formula)))
 
 
 
-prediction <- predict(best.fitting.model, newx = newx, type = "link",se=TRUE) %>% as.data.frame %>% set_colnames("fit")
+prediction <- predict(best.fitting.model,newdata = newx, type = "response",se=TRUE,ncomp = ncomp) %>% as.data.frame %>% set_colnames("fit")
 
 
 
@@ -666,3 +313,93 @@ ggplot(to.plot, aes(x = hiv2010, y = fit)) +
   coord_cartesian(ylim=c(0,.05))
 
 ggsave("figures/figure5.png",width = 7,height = 5)
+
+
+
+
+
+
+###################################################################
+### APPLICATION TO DHS DATA
+##################################################################
+
+# import empirical data
+fv <- fread("./data/facevalidity.csv") %>% set_colnames(c("country","agegroup", "ceb","cs","tfr2010","tfr2000","hiv1990", "hiv2000", "hiv2010","art2005","art2006","art2007","art2008","art2009","art2010","art2011","art_prev2005","art_prev2006","art_prev2007","art_prev2008","art_prev2009","prop15to19_2010","prev15to19_2010","hiv2005","hiv2006","hiv2007","hiv2008","hiv2009")) %>% mutate(cd=ceb-cs)
+
+countries <- c(figure6="Malawi",figure7="Tanzania")
+
+for(fig_name in names(countries)){
+
+  fig_country <- countries[fig_name]
+  
+  # subset each country
+  cntry <- fv %>% filter(country==fig_country)  
+  
+  
+  
+  # indirect estimates with empirical data
+  
+  source("indirect_estimates_functions.R")
+  
+  
+  
+  ind_surv <- ind_est_computations(cntry,2010) %>% as.data.frame() %>% mutate(agegroup=1:7)
+  
+  ind_surv %<>% 
+    select(agegroup,fiveq0=fiveq0, t_ref,refdate)
+  
+  
+  # merge indirect estimates with data on HIV, ART and fertility
+  
+  
+  iep <- cntry %>% left_join(ind_surv,by="agegroup") %>% rename(fiveq0_surv=fiveq0) %>% mutate(agegroup=factor(agegroup))
+  
+  
+  # Compute prediction intervals (Faver & Kowalski, 1997)
+  
+  
+  # Get the new predictions in matrix format
+  nx <- model.matrix(full.model.formula,iep %>% mutate(corr=0))[,-1]
+  
+  # For each row, compute half amplited of the prediciton interval
+  ci <- c()
+  
+  for(i in 1:nrow(iep)){
+  
+    xu <- (nx[i,,drop=FALSE]-x$center)/x$scale
+    
+    ci[i] <- s*t*sqrt(1/nrow(to.model)+xu%*%cv%*%t(xu))  
+    
+  }
+  
+  # Make predictions
+  
+  prediction <- predict(best.fitting.model,newdata = iep, type = "response",ncomp = ncomp) %>% 
+    as.data.frame %>% 
+    set_colnames("PredictedAdj")
+  
+  
+  
+  to.plot <- bind_cols(iep, prediction) %>% mutate(fit=fiveq0_surv+PredictedAdj,lwr=fit-ci,upr=fit+ci)%>% 
+    select(refdate,upr,lwr,Adjusted=fit,Unadjusted=fiveq0_surv) %>% gather(type,value,-refdate,-upr,-lwr)
+  
+  ggplot(to.plot,aes(x=refdate,y=value,shape=type)) +
+    geom_point(color="black", size=3) +
+    #ylim(min(m4$lwr)-.03,max(fiveq0WZ)+0.03)+
+    geom_errorbar(aes(ymin=lwr, ymax=upr))+ 
+    xlab("Year") +
+    ylab("Under-five mortality (deaths per live birth)") +
+    scale_shape_discrete(name="Estimate type", # Legend label, use darker colors
+                         labels=c("Adjusted", "Unadjusted"))+
+    labs(title= fig_country) + 
+    theme_classic() +
+    theme(axis.text = element_text(color="black"))
+  
+  
+  ggsave(paste0("./figures/",fig_name,".png"),width = 7,height = 5,dpi=300)
+  
+  
+  
+    
+}
+
