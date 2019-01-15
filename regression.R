@@ -119,7 +119,7 @@ for(i in 1:9){
 
 s <- sd(residuals(best.fitting.model,ncomp=ncomp))
 
-# Degrees of freedom (Faver & Kowalski, 1997)
+# Degrees of freedom for mean centered data (Faver & Kowalski, 1997)
 
 df <- nrow(to.model) - ncomp -1
 
@@ -380,8 +380,10 @@ for(fig_name in names(countries)){
   
   
   
-  to.plot <- bind_cols(iep, prediction) %>% mutate(fit=fiveq0_surv+PredictedAdj,lwr=fit-ci,upr=fit+ci)%>% 
-    select(refdate,upr,lwr,Adjusted=fit,Unadjusted=fiveq0_surv) %>% gather(type,value,-refdate,-upr,-lwr)
+  to.plot <- bind_cols(iep, prediction) %>% 
+    mutate(fit=fiveq0_surv+PredictedAdj,lwr=fit-ci,upr=fit+ci)%>% # Compute adjusted values and prediction interval upper and lower limits
+    select(refdate,upr,lwr,Adjusted=fit,Unadjusted=fiveq0_surv) %>% # Transform data for plot
+    gather(type,value,-refdate,-upr,-lwr)
   
   ggplot(to.plot,aes(x=refdate,y=value,shape=type)) +
     geom_point(color="black", size=3) +
