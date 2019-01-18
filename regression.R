@@ -79,6 +79,34 @@ nbd2k %<>% mutate(corr=fiveq0_hiv-fiveq0_surv,
 ##### MODEL FITTING AND MODEL SELECTION #####
 ##################################################################
 
+compute_error_measures <- function(y,prediction,method,sample){
+  
+  # Absolute error
+  abs.error <- abs(y-prediction)
+  
+  # Relative error
+  relative.error <- abs.error/abs(y)
+  
+  # Root mean square error
+  
+  rmse <- sqrt(mean(abs.error^2))
+  
+  # Root median square error
+  
+  rmedse <- sqrt(median(abs.error^2))
+  
+  # Mean relative error
+  
+  mre <- mean(Filter(function(x) !is.infinite(x),relative.error),na.rm=TRUE)
+  
+  # Median relative error
+  
+  medre <- median(relative.error)
+  
+  data.frame(method=method,sample=sample,rmse=rmse,rmedse=rmedse,mre=mre,medre=medre,stringsAsFactors = FALSE)
+  
+}
+
 # Prepare data
 
 to.model <- nbd2k %>% mutate(
@@ -89,134 +117,223 @@ to.model <- nbd2k %>% mutate(
 full.model.formula <- corr ~ fiveq0_surv + agegroup + agegroup*hiv1990 + agegroup*hiv2000+  agegroup*hiv2010 + 
   agegroup*art_prev2005+ agegroup*art_prev2007+ agegroup*art_prev2009 + tfr2000 + tfr2010
 
+minimum.model.formula <- corr ~ fiveq0_surv
+
+# Out of sample data
+
+fullsamp <- unique(to.model$i)
+
+set.seed(400)
+
+# dataset with 80% of full sample
+ns1 <- sample(fullsamp, length(fullsamp)*.8, replace=FALSE)
+
+# Select those i's from nbd2k
+
+train.sample <- to.model %>% filter(i %in% ns1)
+
+# dataset with 20% of full sample
+tw1 <- setdiff(fullsamp,ns1)
+
+test.sample <- to.model %>% filter(i %in% tw1)
+
+
+error_table <- data.frame()
+
+##### Full linear model #####
+
+
+fit <- lm(full.model.formula,data=train.sample)
+
+prediction <- predict(fit,newx = train.sample)
+
+error_table %<>% bind_rows(compute_error_measures(train.sample$corr,prediction,"Full Linear Model","in-sample"))
+
+prediction <- predict(fit,newx = test.sample)
+
+error_table %<>% bind_rows(compute_error_measures(test.sample$corr,prediction,"Full Linear Model","out-of-sample"))
+
+##### Forward and Backward selection #####
+
+# maximum model
+
+model.max <- glm(formula=full.model.formula,
+                 family = "gaussian"(link="identity"), data=train.sample)
+
+# minimum model
+
+model.min <- glm(formula=minimum.model.formula, family = "gaussian"(link="identity"), data=train.sample)
+
+
+# Forward BIC
+
+fit <- step(object=model.min, scope=list(upper=model.max,lower=~1), direction="forward",k=log(nrow(train.sample)))
+
+prediction <- predict(fit,newx = train.sample)
+
+error_table %<>% bind_rows(compute_error_measures(train.sample$corr,prediction,"Forward Sel. BIC","in-sample"))
+
+prediction <- predict(fit,newx = test.sample)
+
+error_table %<>% bind_rows(compute_error_measures(test.sample$corr,prediction,"Forward Sel. BIC","out-of-sample"))
+
+# Forward AIC
+
+fit <- step(object=model.min, scope=list(upper=model.max,lower=~1), direction="forward",k=2)
+
+prediction <- predict(fit,newx = train.sample)
+
+error_table %<>% bind_rows(compute_error_measures(train.sample$corr,prediction,"Forward Sel. AIC","in-sample"))
+
+prediction <- predict(fit,newx = test.sample)
+
+error_table %<>% bind_rows(compute_error_measures(test.sample$corr,prediction,"Forward Sel. AIC","out-of-sample"))
+
+# Backward BIC
+
+fit <- step(model.max, direction="backward",k=log(nrow(to.model)))
+
+prediction <- predict(fit,newx = train.sample)
+
+error_table %<>% bind_rows(compute_error_measures(train.sample$corr,prediction,"Backward Sel. BIC","in-sample"))
+
+prediction <- predict(fit,newx = test.sample)
+
+error_table %<>% bind_rows(compute_error_measures(test.sample$corr,prediction,"Backward Sel. BIC","out-of-sample"))
+
+# Backward AIC
+
+fit <- step(model.max, direction="backward",k=2)
+
+prediction <- predict(fit,newx = train.sample)
+
+error_table %<>% bind_rows(compute_error_measures(train.sample$corr,prediction,"Backward Sel. AIC","in-sample"))
+
+prediction <- predict(fit,newx = test.sample)
+
+error_table %<>% bind_rows(compute_error_measures(test.sample$corr,prediction,"Backward Sel. AIC","out-of-sample"))
+
+##### Glmnet #####
+
+glmnet.errors <- lapply(c(0,0.5,1.0),function(alpha){
+  
+    
+    # Get output vector for glmnet
+    
+    y <- train.sample %>% pull(all.vars(full.model.formula)[1])
+    
+    
+    # Get predictors for glmnet
+    
+    x <- model.matrix(full.model.formula,train.sample)[,-1]
+    
+    fit <- cv.glmnet(x,y,family="gaussian",alpha=alpha)
+      
+      
+      prediction <- predict(fit,newx = x,s = "lambda.min")
+      
+      train.error <- compute_error_measures(train.sample$corr,prediction,paste0("glmnet, alpha=",alpha),"in-sample")
+      
+      xnew <- model.matrix(full.model.formula,test.sample)[,-1]
+      
+      prediction <- predict(fit,newx = xnew,s = "lambda.min")
+      
+      test.error <- compute_error_measures(test.sample$corr,prediction,paste0("glmnet, alpha=",alpha),"out-of-sample")
+      
+      bind_rows(train.error,test.error)
+    
+}) %>% bind_rows()
+
+error_table %<>% bind_rows(glmnet.errors)
+
 ##### PCR #####
 
 set.seed(100)
-best.fitting.model <- pcr(full.model.formula,data=to.model,scale=TRUE,validation="CV", jackknife=TRUE)
+fit <- pcr(full.model.formula,data=train.sample,scale=TRUE,validation="CV", jackknife=TRUE)
 
-ncomp <- 20
+ncomps <- c(20,30,selectNcomp(fit,method="onesigma",plot=TRUE)) %>% sort
 
+pcr_errors <- lapply(ncomps,function(ncomp){
 
-# To use later to compute prediction intervals
-
-# Compute covariance of the PCR regression coefficients (Faver & Kowalski, 1997,PROPAGATION OF MEASUREMENT ERRORS FOR THE VALIDATION OF PREDICTIONS OBTAINED BY PRINCIPAL COMPONENT REGRESSION AND PARTIAL LEAST SQUARES)
-
-x <- prcomp(model.matrix(best.fitting.model),scale. = TRUE)
-
-cv <- 0
-
-for(i in 1:9){
+  prediction <- predict(fit,newdata = train.sample, type = "response",ncomp = ncomp)
   
-  ev <-  x$sdev[i]^2
+  train.error <- compute_error_measures(train.sample$corr,prediction,paste0("PCR, ncomp=",ncomp),"in-sample")
   
-  r <- as.matrix(x$rotation)[,i,drop=FALSE]
+  prediction <- predict(fit,newx = test.sample,ncomp = ncomp)
   
-  cv <- cv+1/ev*r%*%t(r)
+  test.error <- compute_error_measures(test.sample$corr,prediction,paste0("PCR, ncomp=",ncomp),"out-of-sample")
   
-}
+  bind_rows(train.error,test.error)
+    
+}) %>% bind_rows()
 
-# sqrt of the variance of the measurement errors
 
-s <- sd(residuals(best.fitting.model,ncomp=ncomp))
+error_table %<>% bind_rows(pcr_errors)
 
-# Degrees of freedom for mean centered data (Faver & Kowalski, 1997)
 
-df <- nrow(to.model) - ncomp -1
+##### PLS #####
 
-# t value for the 0.05 CI interval (Faver & Kowalski, 1997)
+set.seed(100)
+fit <- plsr(full.model.formula,data=train.sample,scale=TRUE,validation="CV", jackknife=TRUE)
+summary(fit)
+validationplot(fit)
 
-t <- dt(0.025,df)
+# 32 components are enough to account for at least 90% of variaiblity in both X and Y. Also use optimal number of components
 
-# summary(best.fitting.model)
-# Data: 	X dimension: 31360 51 
-# Y dimension: 31360 1
-# Fit method: svdpc
-# Number of components considered: 51
-# 
-# VALIDATION: RMSEP
-# Cross-validated using 10 random segments.
-# (Intercept)  1 comps   2 comps   3 comps   4 comps   5 comps   6 comps   7 comps   8 comps   9 comps  10 comps
-# CV         0.01261  0.01036  0.009542  0.009206  0.009023  0.008446  0.008142  0.008122  0.006469  0.006094  0.006079
-# adjCV      0.01261  0.01036  0.009542  0.009450  0.008474  0.008221  0.008141  0.008121  0.006469  0.006094  0.006102
-# 11 comps  12 comps  13 comps  14 comps  15 comps  16 comps  17 comps  18 comps  19 comps  20 comps  21 comps
-# CV     0.006063  0.006053  0.006029  0.005819  0.005417  0.004444  0.004323  0.004234  0.004095   0.00399  0.003841
-# adjCV  0.006100  0.006089  0.006031  0.005818  0.005417  0.004443  0.004331  0.004098  0.004089   0.00399  0.003841
-# 22 comps  23 comps  24 comps  25 comps  26 comps  27 comps  28 comps  29 comps  30 comps  31 comps  32 comps
-# CV     0.003834  0.003824  0.003819  0.003815  0.003567  0.003532  0.003216  0.003207  0.003126  0.003104  0.003072
-# adjCV  0.003840  0.003840  0.003828  0.003818  0.003567  0.003531  0.003216  0.003207  0.003125  0.003124  0.003078
-# 33 comps  34 comps  35 comps  36 comps  37 comps  38 comps  39 comps  40 comps  41 comps  42 comps  43 comps
-# CV      0.00305  0.003031  0.002996  0.002996  0.002996  0.002995  0.002995  0.002993  0.002993   0.00298  0.002978
-# adjCV   0.00307  0.003039  0.002996  0.002996  0.002996  0.002996  0.002995  0.002995  0.002993   0.00298  0.002978
-# 44 comps  45 comps  46 comps  47 comps  48 comps  49 comps  50 comps  51 comps
-# CV     0.002978  0.002978  0.002977  0.002977  0.002977  0.002977  0.002977  0.002977
-# adjCV  0.002978  0.002977  0.002976  0.002976  0.002977  0.002977  0.002977  0.002977
-# 
-# TRAINING: % variance explained
-# 1 comps  2 comps  3 comps  4 comps  5 comps  6 comps  7 comps  8 comps  9 comps  10 comps  11 comps  12 comps
-# X       13.47    24.62    35.48    46.34    57.20    68.06    71.94    75.12    77.64     80.01     82.38     84.75
-# corr    32.54    42.73    44.40    55.50    57.61    58.34    58.55    73.70    76.68     76.69     76.69     76.78
-# 13 comps  14 comps  15 comps  16 comps  17 comps  18 comps  19 comps  20 comps  21 comps  22 comps  23 comps
-# X        87.12     89.44     90.97     91.94     92.81     93.67     94.54     95.41     96.27     96.84     97.42
-# corr     77.20     78.74     81.57     87.61     88.24     89.50     89.50     90.07     90.74     90.74     90.74
-# 24 comps  25 comps  26 comps  27 comps  28 comps  29 comps  30 comps  31 comps  32 comps  33 comps  34 comps
-# X        98.00     98.58     99.14     99.37     99.52     99.61     99.68     99.73     99.78     99.84     99.89
-# corr     90.81     90.86     92.02     92.18     93.51     93.55     93.87     93.88     94.06     94.09     94.22
-# 35 comps  36 comps  37 comps  38 comps  39 comps  40 comps  41 comps  42 comps  43 comps  44 comps  45 comps
-# X        99.95     99.96     99.97     99.97     99.98     99.98     99.99     99.99    100.00    100.00    100.00
-# corr     94.37     94.37     94.37     94.37     94.38     94.38     94.39     94.43     94.44     94.44     94.44
-# 46 comps  47 comps  48 comps  49 comps  50 comps  51 comps
-# X       100.00    100.00    100.00    100.00    100.00    100.00
-# corr     94.45     94.45     94.45     94.45     94.45     94.45
+ncomps <- c(32,selectNcomp(fit,method="onesigma",plot=TRUE)) %>% sort
 
 
 
+pls_errors <- lapply(ncomps,function(ncomp){
+  
+  prediction <- predict(fit,newdata = train.sample, type = "response",ncomp = ncomp)
+  
+  train.error <- compute_error_measures(train.sample$corr,prediction,paste0("PLS, ncomp=",ncomp),"in-sample")
+  
+  prediction <- predict(fit,newx = test.sample,ncomp = ncomp)
+  
+  test.error <- compute_error_measures(test.sample$corr,prediction,paste0("PLS, ncomp=",ncomp),"out-of-sample")
+  
+  bind_rows(train.error,test.error)
+  
+}) %>% bind_rows()
 
-# Coefficients table
 
-# WARNING
-# The jackknife variance estimates are known to be biased (see var.jack). Also, the distribution 
-# of the regression coefficient estimates and the jackknife variance estimates are unknown (at least in PLSR/PCR). 
-# Consequently, the distribution (and in particular, the degrees of freedom) of the resulting t statistics is unknown. 
-# The present code simply assumes a t distribution with m - 1 degrees of freedom, where m is the number of cross-validation segments.
-# Therefore, the resulting p values should not be used uncritically, and should perhaps be regarded as mere indicator of (non-)significance.
+error_table %<>% bind_rows(pls_errors)
 
-ft <- jack.test(best.fitting.model,ncomp = ncomp) %$% data.frame(coefficients,sd,tvalues,pvalues)  %>% mutate(var=rownames(.)) %>% set_colnames(c("coef","se","t","p.value","var")) %>% mutate_if(is.numeric,funs(sprintf("%0.6f",.))) %>%  select(var,everything()) %>% flextable()
+# Save table
+
+ft <- error_table  %>% 
+  mutate_at(vars(one_of("rmse","rmedse")),funs(sprintf("%0.6f",.))) %>%
+  flextable() %>% set_header_labels(rmse="Root mean\nsquare error",
+                                    rmedse="Root median\nsquare error",
+                                    mre="Mean relative\nerror",
+                                    medre="Median relative\nerror") %>%
+  merge_v(j=1)
 
 doc <- read_docx() %>%
-  body_add_par(value = paste("PCR. ncomp=",ncomp), style = "table title") %>% 
-  body_add_flextable(ft) %>%
-  body_add_par(value = "WARNING: The jackknife variance estimates are known to be biased (see var.jack). Also, the distribution of the regression coefficient estimates and the jackknife variance estimates are unknown (at least in PLSR/PCR).Consequently, the distribution (and in particular, the degrees of freedom) of the resulting t statistics is unknown. The present code simply assumes a t distribution with m - 1 degrees of freedom, where m is the number of cross-validation segments. Therefore, the resulting p values should not be used uncritically, and should perhaps be regarded as mere indicator of (non-)significance.")
-
-print(doc,"./tables/PCR_coefs.docx")
+  body_add_par(value = "Model selection.", style = "table title") %>% 
+  body_add_flextable(ft)
 
 
-
-##### Plot checks ########
-
-
-to.plot <- to.model %>% filter(agegroup %in% c("3","4","5","6","7")) %>% 
-  mutate(agegroup=factor(as.character(agegroup),levels=c("3","4","5","6","7"),labels=c("Age group 25-29 years","Age group 30-34 years","Age group 35-39 years","Age group 40-44 years","Age group 45-49 years")))
+# Best fitting model
 
 
-ggplot(to.plot, aes(x = hiv1990, y = corr)) + 
-  geom_point()+
-  facet_wrap(~agegroup,ncol=3,scales = "free_x") + 
-  theme_classic() + 
-  theme(legend.position="none",
-        strip.background = element_blank()) +
-  xlab("HIV prevalence in 1990")+
-  ylab("Bias")+
-  coord_cartesian()
+# Get output vector for glmnet
 
-ggplot(to.plot, aes(x = hiv2010, y = corr)) + 
-  geom_point()+
-  facet_wrap(~agegroup,ncol=3,scales = "free_x") + 
-  theme_classic() + 
-  theme(legend.position="none",
-        strip.background = element_blank()) +
-  xlab("HIV prevalence in 2010")+
-  ylab("Bias")+
-  coord_cartesian()
+y <- to.model %>% pull(all.vars(full.model.formula)[1])
+
+
+# Get predictors for glmnet
+
+x <- model.matrix(full.model.formula,to.model)[,-1]
+
+alpha <- 1.0
+
+best.fitting.model <- cv.glmnet(x,y,family="gaussian",alpha=alpha)
+
+
+
 
 
 ##### Figure 4 #####
@@ -235,12 +352,10 @@ other_vars <- to.model %>% summarise_if(is.numeric,mean)
 
 # Compute prediction
 
-newx <- bind_cols(to.plot,other_vars[rep(1,nrow(to.plot)),]) %>% select(one_of(all.vars(full.model.formula))) 
+newx <- bind_cols(to.plot,other_vars[rep(1,nrow(to.plot)),]) %>% select(one_of(all.vars(full.model.formula))) %>% model.matrix(full.model.formula,data=.)
 
 
-
-
-prediction <- predict(best.fitting.model,newdata = newx, type = "response",se=TRUE,ncomp = ncomp) %>% as.data.frame %>% set_colnames("fit")
+prediction <- predict(best.fitting.model, newx = newx, type = "link",se=TRUE) %>% as.data.frame %>% set_colnames("fit")
 
 
 
@@ -284,13 +399,11 @@ other_vars <- to.model %>% summarise_if(is.numeric,mean)
 
 # Compute prediction
 
-newx <- bind_cols(to.plot,other_vars[rep(1,nrow(to.plot)),]) %>% select(one_of(all.vars(full.model.formula)))
+newx <- bind_cols(to.plot,other_vars[rep(1,nrow(to.plot)),]) %>% select(one_of(all.vars(full.model.formula))) %>% model.matrix(full.model.formula,data=.)
 
 
 
-prediction <- predict(best.fitting.model,newdata = newx, type = "response",se=TRUE,ncomp = ncomp) %>% as.data.frame %>% set_colnames("fit")
-
-
+prediction <- predict(best.fitting.model, newx = newx, type = "link",se=TRUE) %>% as.data.frame %>% set_colnames("fit")
 
 to.plot <- bind_cols(to.plot, prediction)
 
@@ -329,7 +442,7 @@ fv <- fread("./data/facevalidity.csv") %>% set_colnames(c("country","agegroup", 
 countries <- c(figure6="Malawi",figure7="Tanzania")
 
 for(fig_name in names(countries)){
-
+  # fig_name <- "figure6"
   fig_country <- countries[fig_name]
   
   # subset each country
@@ -349,34 +462,118 @@ for(fig_name in names(countries)){
     select(agegroup,fiveq0=fiveq0, t_ref,refdate)
   
   
-  # merge indirect estimates with data on HIV, ART and fertility
+  # merge indirect estimates based on empirical data from Malawi or Tanzania with
+  # data on HIV, ART and fertility from that same country
+  
+  # ind_est contains the results of indirect_estimates_functions applied to the data from Malawi or Tanzania
+  # cntry contains the data from Malawi or Tanzania (from facevalidity.csv)
   
   
-  iep <- cntry %>% left_join(ind_surv,by="agegroup") %>% rename(fiveq0_surv=fiveq0) %>% mutate(agegroup=factor(agegroup))
+  iep <- cntry %>% left_join(ind_surv,by="agegroup") %>% rename(fiveq0_surv=fiveq0) %>% mutate(agegroup=factor(agegroup)) %>% select(-cd)
   
   
-  # Compute prediction intervals (Faver & Kowalski, 1997)
+ 
   
+  # also need nq0 from results of indirect_estimates_functions (see line 30 below)
+  # may need to edit indirect_estimates_functions to output nq0 as part of ind_est
+  
+  
+  colnames(iep) <- c("country","agegroup", "ceb","cs","tfr2010","tfr2000","hiv1990", "hiv2000", "hiv2010","art2005","art2006","art2007","art2008","art2009","art2010","art2011","art_prev2005","art_prev2006","art_prev2007","art_prev2008","art_prev2009","prop15to19_2010","prev15to19_2010","hiv2005","hiv2006","hiv2007","hiv2008","hiv2009","fiveq0_surv", "t_ref","refdate")
+  
+  # Ward & Zaba (2008) coefficients
+  a = c(.1134,.1202,.1107,.1720,.1749,.1504,.2552)
+  b=c(-.0226,-.0438,-.0882,-.1412,-.1758,-.1849,-.3269)
+  c=c(-.1112,-.0978,-.0373,.0163,.042,.1807,.5594)
+  
+  # W&Z adjustment factor from applying coefficients to empirical data
+  nz = a*iep$hiv2000+b*(iep$hiv2000^2)+c*iep$prev15to19_2010
+  
+  #Convert each n q 0 + n(z) into 5q0
+  
+  # Standard indirect estimates, adding Ward&Zaba adj factors
+  # n = c(1,2,3,5,10,15,20)
+  # UN General Female LT, e(0)=60, for above n
+  l = c(.92688,.91025,.90151,.89193,.89534,.89002,.88195)
+  q = 1-l
+  logitMLT=.5*log(q/(1-q))
+  alpha = NA
+  fiveq0WZ = NA
+  Y5 = NA
+  
+  nq0 <- ind_est_computations_core(cntry,2010)$nq0
+  
+  for(i in 1:7){
+    Y5[i] = .5*log((nq0[i]+nz[i])/(1-(nq0[i]+nz[i])))
+    alpha[i] = Y5[i] - log((1-logitMLT[i])/logitMLT[i])
+    fiveq0WZ[i] = exp(2*(alpha[i]+logitMLT[4]))/(1+exp(2*(alpha[i]+logitMLT[4])))
+  }
+  
+  # fiveq0WZ are the Ward & Zaba estimates of U5M that should be plotted with the crude estimates and
+  # the estimates from our model
+  
+  
+ 
   
   # Get the new predictions in matrix format
   nx <- model.matrix(full.model.formula,iep %>% mutate(corr=0))[,-1]
   
-  # For each row, compute half amplited of the prediciton interval
-  ci <- c()
   
-  for(i in 1:nrow(iep)){
   
-    xu <- (nx[i,,drop=FALSE]-x$center)/x$scale
-    
-    ci[i] <- s*t*sqrt(1/nrow(to.model)+xu%*%cv%*%t(xu))  
-    
-  }
+  
   
   # Make predictions
   
-  prediction <- predict(best.fitting.model,newdata = iep, type = "response",ncomp = ncomp) %>% 
+  
+  
+  prediction <- predict(best.fitting.model,newx = nx,se=TRUE,s="lambda.min") %>% 
     as.data.frame %>% 
     set_colnames("PredictedAdj")
+  
+  
+  glmnet_prediciton_se <- function(xnew,xs,y,yhat,my_mod){
+    
+    
+    # Note, you can't estimate an intercept here
+    
+    # Betas' variance covariance matrix (Tibshirani, 1996)
+    
+    n <- dim(xs)[1]
+    k <- dim(xs)[2]
+    
+    # residual variance
+    
+    sigma_sq <- sum((y-yhat)^2)/ (n-k-1)
+    
+    i_lams <- Matrix(diag(x=1,nrow=k,ncol=k),sparse=TRUE)
+    
+    xpx <- t(xs)%*%xs
+    
+    lam <- MASS::ginv(as.matrix(abs(as.vector(coef.cv.glmnet(my_mod,s="lambda.min")))[-1]*i_lams))
+    
+    xpxinvplam <- solve(xpx+my_mod$lambda.min*lam)
+    
+    var_cov_beta <- sigma_sq*(xpxinvplam %*% xpx %*% xpxinvplam)
+    
+    
+    # Prefiction variance
+    
+    var_pred <- diag(nx %*% var_cov_beta %*% t(nx))
+    
+    h <- var_pred/sigma_sq
+    
+    # We are making predicitions on a new observation, so se is sigma*sqrt(1+h) isntead of sigma*sqrt(h)
+    
+    se_pred <- sqrt(sigma_sq)*sqrt(1+h)
+    
+    
+    print('NOTE: These standard errors are very biased.')
+    return(se_pred)
+  }
+  
+  l_yhat <- predict(best.fitting.model,newx = x,s="lambda.min")
+  
+  prediction %<>% mutate(ci=qt(1-0.025,df = dim(x)[1]-dim(x)[2])*glmnet_prediciton_se(xn,x,y,l_yhat,best.fitting.model))
+  
   
   
   
