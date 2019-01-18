@@ -2,7 +2,7 @@ abc = read.csv("./data/UNgeneral_MLT_ABC.csv", head=TRUE)
 efg = read.csv("./data/UNgeneral_MLT_EFG.csv", head=TRUE)
 
 
-ind_est_computations <- function(surv_moms,survey){
+ind_est_computations_core <- function(surv_moms,survey){
   
   #Sum women, CEB, CD by agegroup & caclulate CD/CEB & parity ratios
   
@@ -67,9 +67,22 @@ ind_est_computations <- function(surv_moms,survey){
     fiveq0[i] = exp(2*(alpha[i]+logitMLT[4]))/(1+exp(2*(alpha[i]+logitMLT[4])))
   }
   
-  ind_est <- cbind(fiveq0,t_ref)
+  list(fiveq0=fiveq0,t_ref=t_ref,byagegroup=byagegroup,nq0=nq0)
+  
+}
+
+
+ind_est_computations <- function(surv_moms,survey){
+  
+  ind_est_core <- ind_est_computations_core(surv_moms,survey)
+  
+  
+  
+  ind_est <- cbind(ind_est_core$fiveq0,ind_est_core$t_ref)
+  colnames(ind_est) = c("fiveq0","t_ref")
+  
   refdate <- survey-ind_est[,"t_ref"]
-  ind_est <- cbind(fiveq0,t_ref,refdate,byagegroup[,"ceb"],byagegroup[,"women"],byagegroup[,"cdceb"])
+  ind_est <- cbind(ind_est_core$fiveq0,ind_est_core$t_ref,refdate,ind_est_core$byagegroup[,"ceb"],ind_est_core$byagegroup[,"women"],ind_est_core$byagegroup[,"cdceb"])
   
   colnames(ind_est) = c("fiveq0","t_ref","refdate","ceb","women","cdceb")
   
