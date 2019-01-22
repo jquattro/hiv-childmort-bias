@@ -214,7 +214,7 @@ prediction <- predict(fit,newx = test.sample)
 error_table %<>% bind_rows(compute_error_measures(test.sample$corr,prediction,"Backward Sel. AIC","out-of-sample"))
 
 ##### Glmnet #####
-
+set.seed(500)
 glmnet.errors <- lapply(c(0,0.5,1.0),function(alpha){
   
     
@@ -330,6 +330,7 @@ x <- model.matrix(full.model.formula,to.model)[,-1]
 
 alpha <- 1.0
 
+set.seed(600)
 best.fitting.model <- cv.glmnet(x,y,family="gaussian",alpha=alpha)
 
 
@@ -354,6 +355,7 @@ other_vars <- to.model %>% summarise_if(is.numeric,mean)
 
 newx <- bind_cols(to.plot,other_vars[rep(1,nrow(to.plot)),]) %>% select(one_of(all.vars(full.model.formula))) %>% model.matrix(full.model.formula,data=.)
 
+newx <- newx[,-1]
 
 prediction <- predict(best.fitting.model, newx = newx, type = "link",se=TRUE) %>% as.data.frame %>% set_colnames("fit")
 
@@ -401,7 +403,7 @@ other_vars <- to.model %>% summarise_if(is.numeric,mean)
 
 newx <- bind_cols(to.plot,other_vars[rep(1,nrow(to.plot)),]) %>% select(one_of(all.vars(full.model.formula))) %>% model.matrix(full.model.formula,data=.)
 
-
+newx <- newx[,-1]
 
 prediction <- predict(best.fitting.model, newx = newx, type = "link",se=TRUE) %>% as.data.frame %>% set_colnames("fit")
 
@@ -469,7 +471,11 @@ for(fig_name in names(countries)){
   # cntry contains the data from Malawi or Tanzania (from facevalidity.csv)
   
   
-  iep <- cntry %>% left_join(ind_surv,by="agegroup") %>% rename(fiveq0_surv=fiveq0) %>% mutate(agegroup=factor(agegroup)) %>% select(-cd)
+  iep <- cntry %>% 
+    left_join(ind_surv,by="agegroup") %>% 
+    rename(fiveq0_surv=fiveq0) %>% 
+    mutate(agegroup=factor(agegroup)) %>% 
+    select(-cd)
   
   
  
@@ -504,7 +510,7 @@ for(fig_name in names(countries)){
   
   for(i in 1:7){
     Y5[i] = .5*log((nq0[i]+nz[i])/(1-(nq0[i]+nz[i])))
-    alpha[i] = Y5[i] - log((1-logitMLT[i])/logitMLT[i])
+    alpha[i] = Y5[i] - logitMLT[i]
     fiveq0WZ[i] = exp(2*(alpha[i]+logitMLT[4]))/(1+exp(2*(alpha[i]+logitMLT[4])))
   }
   
@@ -529,22 +535,26 @@ for(fig_name in names(countries)){
     as.data.frame %>% 
     set_colnames("PredictedAdj")
   
+  # Function to compute prediction SEs for glmnet. 
   
   glmnet_prediciton_se <- function(xnew,xs,y,yhat,my_mod){
     
     
     # Note, you can't estimate an intercept here
     
-    # Betas' variance covariance matrix (Tibshirani, 1996)
+    # Betas' covariance matrix (Tibshirani, 1996)
     
     n <- dim(xs)[1]
-    k <- dim(xs)[2]
     
-    # residual variance
+    # Number of coefficients that are not 0 minus 1 for the intercept
     
-    sigma_sq <- sum((y-yhat)^2)/ (n-k-1)
+    k <- coefficients(best.fitting.model,s = "lambda.min") %>% as.matrix %>% equals(0) %>% not %>% sum %>% add(-1)
     
-    i_lams <- Matrix(diag(x=1,nrow=k,ncol=k),sparse=TRUE)
+    # residual variance.
+    
+    sigma_sq <- sum((y-yhat)^2)/ (n-k)
+    
+    i_lams <- Matrix(diag(x=1,nrow=dim(xs)[2],ncol=dim(xs)[2]),sparse=TRUE)
     
     xpx <- t(xs)%*%xs
     
@@ -577,9 +587,9 @@ for(fig_name in names(countries)){
   
   
   
-  to.plot <- bind_cols(iep, prediction) %>% 
+  to.plot <- bind_cols(iep, prediction,data.frame(fiveq0WZ=fiveq0WZ)) %>% 
     mutate(fit=fiveq0_surv+PredictedAdj,lwr=fit-ci,upr=fit+ci)%>% # Compute adjusted values and prediction interval upper and lower limits
-    select(refdate,upr,lwr,Adjusted=fit,Unadjusted=fiveq0_surv) %>% # Transform data for plot
+    select(refdate,upr,lwr,Adjusted=fit,Unadjusted=fiveq0_surv,`Ward & Zaba`=fiveq0WZ) %>% # Transform data for plot
     gather(type,value,-refdate,-upr,-lwr)
   
   ggplot(to.plot,aes(x=refdate,y=value,shape=type)) +
@@ -589,7 +599,7 @@ for(fig_name in names(countries)){
     xlab("Year") +
     ylab("Under-five mortality (deaths per live birth)") +
     scale_shape_discrete(name="Estimate type", # Legend label, use darker colors
-                         labels=c("Adjusted", "Unadjusted"))+
+                         labels=c("Adjusted", "Unadjusted","Ward & Zaba"))+
     labs(title= fig_country) + 
     theme_classic() +
     theme(axis.text = element_text(color="black"))
