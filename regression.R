@@ -1,4 +1,12 @@
 
+
+if(!require(bcaboot)){
+  install.packages("bcaboot",dependencies = TRUE,repos='http://cran.us.r-project.org')
+}
+
+
+require(bcaboot)
+
 if(!require(data.table)){
   install.packages("data.table",dependencies = TRUE,repos='http://cran.us.r-project.org')
 }
@@ -227,6 +235,7 @@ glmnet.errors <- lapply(c(0,0.5,1.0),function(alpha){
     
     x <- model.matrix(full.model.formula,train.sample)[,-1]
     
+    set.seed(500)
     fit <- cv.glmnet(x,y,family="gaussian",alpha=alpha)
       
       
@@ -330,12 +339,12 @@ x <- model.matrix(full.model.formula,to.model)[,-1]
 
 alpha <- 1.0
 
-set.seed(600)
+set.seed(500)
 best.fitting.model <- cv.glmnet(x,y,family="gaussian",alpha=alpha)
 
+lambda <-best.fitting.model$lambda.min
 
-
-
+best.fitting.model <- glmnet(x,y,family="gaussian",alpha=alpha,lambda = lambda)
 
 ##### Figure 4 #####
 
@@ -443,8 +452,10 @@ fv <- fread("./data/facevalidity.csv") %>% set_colnames(c("country","agegroup", 
 
 countries <- c(figure6="Malawi",figure7="Tanzania")
 
+boot_outs <- list()
+
 for(fig_name in names(countries)){
-  # fig_name <- "figure6"
+  # fig_name <- "figure7"
   fig_country <- countries[fig_name]
   
   # subset each country
@@ -535,60 +546,112 @@ for(fig_name in names(countries)){
     as.data.frame %>% 
     set_colnames("PredictedAdj")
   
-  # Function to compute prediction SEs for glmnet. 
+  # # Function to compute prediction SEs for glmnet.
+  # 
+  # glmnet_prediciton_se <- function(xnew,xs,y,yhat,my_mod){
+  # 
+  # 
+  #   # Note, you can't estimate an intercept here
+  # 
+  #   # Betas' covariance matrix (Tibshirani, 1996)
+  # 
+  #   n <- dim(xs)[1]
+  # 
+  #   # Number of coefficients that are not 0 minus 1 for the intercept
+  # 
+  #   k <- coefficients(best.fitting.model,s = "lambda.min") %>% as.matrix %>% equals(0) %>% not %>% sum %>% add(-1)
+  # 
+  #   # residual variance.
+  # 
+  #   sigma_sq <- sum((y-yhat)^2)/ (n-k)
+  # 
+  #   i_lams <- Matrix(diag(x=1,nrow=dim(xs)[2],ncol=dim(xs)[2]),sparse=TRUE)
+  # 
+  #   xpx <- t(xs)%*%xs
+  # 
+  #   lam <- MASS::ginv(as.matrix(abs(as.vector(coef.cv.glmnet(my_mod,s="lambda.min")))[-1]*i_lams))
+  # 
+  #   xpxinvplam <- solve(xpx+my_mod$lambda.min*lam)
+  # 
+  #   var_cov_beta <- sigma_sq*(xpxinvplam %*% xpx %*% xpxinvplam)
+  # 
+  # 
+  #   # Prefiction variance
+  # 
+  #   var_pred <- diag(nx %*% var_cov_beta %*% t(nx))
+  # 
+  #   h <- var_pred/sigma_sq
+  # 
+  #   # We are making predicitions on a new observation, so se is sigma*sqrt(1+h) isntead of sigma*sqrt(h)
+  # 
+  #   se_pred <- sqrt(sigma_sq)*sqrt(1+h)
+  # 
+  # 
+  #   print('NOTE: These standard errors are very biased.')
+  #   return(se_pred)
+  # }
+  # 
+  # l_yhat <- predict(best.fitting.model,newx = x,s="lambda.min")
+  # 
+  # prediction %<>% mutate(ci=qt(1-0.025,df = dim(x)[1]-dim(x)[2])*glmnet_prediciton_se(xn,x,y,l_yhat,best.fitting.model))
+
+  # Bootstrap
   
-  glmnet_prediciton_se <- function(xnew,xs,y,yhat,my_mod){
+  # Get output vector for glmnet
+  
+  y <- to.model %>% pull(all.vars(full.model.formula)[1])
+  
+  
+  # Get predictors for glmnet
+  
+  x <- model.matrix(full.model.formula,to.model)[,-1]
+  
+  
+  Xy <-  cbind(y,x)
+  
+ 
+  theta <- function(xy,nx,glmnet_alpha,lambda){
+    
+    X <- xy[,2:(dim(xy)[2])]
+    Y <- xy[,1]
+    set.seed(300)
+    m <- cv.glmnet(X,Y,family="gaussian",alpha=glmnet_alpha)
     
     
-    # Note, you can't estimate an intercept here
+    predict(m,newx = nx,s="lambda.min") %>% as.vector
     
-    # Betas' covariance matrix (Tibshirani, 1996)
-    
-    n <- dim(xs)[1]
-    
-    # Number of coefficients that are not 0 minus 1 for the intercept
-    
-    k <- coefficients(best.fitting.model,s = "lambda.min") %>% as.matrix %>% equals(0) %>% not %>% sum %>% add(-1)
-    
-    # residual variance.
-    
-    sigma_sq <- sum((y-yhat)^2)/ (n-k)
-    
-    i_lams <- Matrix(diag(x=1,nrow=dim(xs)[2],ncol=dim(xs)[2]),sparse=TRUE)
-    
-    xpx <- t(xs)%*%xs
-    
-    lam <- MASS::ginv(as.matrix(abs(as.vector(coef.cv.glmnet(my_mod,s="lambda.min")))[-1]*i_lams))
-    
-    xpxinvplam <- solve(xpx+my_mod$lambda.min*lam)
-    
-    var_cov_beta <- sigma_sq*(xpxinvplam %*% xpx %*% xpxinvplam)
-    
-    
-    # Prefiction variance
-    
-    var_pred <- diag(nx %*% var_cov_beta %*% t(nx))
-    
-    h <- var_pred/sigma_sq
-    
-    # We are making predicitions on a new observation, so se is sigma*sqrt(1+h) isntead of sigma*sqrt(h)
-    
-    se_pred <- sqrt(sigma_sq)*sqrt(1+h)
-    
-    
-    print('NOTE: These standard errors are very biased.')
-    return(se_pred)
   }
   
-  l_yhat <- predict(best.fitting.model,newx = x,s="lambda.min")
   
-  prediction %<>% mutate(ci=qt(1-0.025,df = dim(x)[1]-dim(x)[2])*glmnet_prediciton_se(xn,x,y,l_yhat,best.fitting.model))
   
+  print("Computing bootstrap prediction intervals, this can be high time consuming.")
+ 
+  boot_outs[[fig_name]] <- lapply(1:nrow(nx),function(i){
+    print(i)
+    print(Sys.time())
+    new_data <- nx[i,,drop=FALSE]
+    
+    #i <- 1
+    set.seed(600)
+    bcajack(x=Xy,B=1000,func=theta,new_data,1.0,lambda)
+  })
+ 
+  ci <- boot_outs[[fig_name]] %>% lapply(function(r){
+    
+    r$lims %>% as.data.frame() %>% mutate(quantile=as.numeric(rownames(.))) %>% filter(quantile %in% c(0.025,0.975)) %>% select(quantile,bca) %>% mutate(quantile=case_when(quantile==0.025 ~ "ci.lo",TRUE~ "ci.hi")) %>% spread(quantile,bca)
+  }) %>% bind_rows()
+  
+  pr <- boot_outs[[fig_name]] %>% lapply(function(r){
+    
+    r$stats[1,"theta"] 
+  }) %>% unlist()
+  
+  prediction %<>% bind_cols(ci)
   
   
   
   to.plot <- bind_cols(iep, prediction,data.frame(fiveq0WZ=fiveq0WZ)) %>% 
-    mutate(fit=fiveq0_surv+PredictedAdj,lwr=fit-ci,upr=fit+ci)%>% # Compute adjusted values and prediction interval upper and lower limits
+    mutate(fit=fiveq0_surv+PredictedAdj,lwr=fiveq0_surv+ci.lo,upr=fiveq0_surv+ci.hi)%>% # Compute adjusted values and prediction interval upper and lower limits
     select(refdate,upr,lwr,Adjusted=fit,Unadjusted=fiveq0_surv,`Ward & Zaba`=fiveq0WZ) %>% # Transform data for plot
     gather(type,value,-refdate,-upr,-lwr)
   
