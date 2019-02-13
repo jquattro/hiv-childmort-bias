@@ -1,5 +1,3 @@
-
-
 if(!require(bcaboot)){
   install.packages("bcaboot",dependencies = TRUE,repos='http://cran.us.r-project.org')
 }
@@ -325,7 +323,7 @@ doc <- read_docx() %>%
   body_add_flextable(ft)
 
 
-# Best fitting model
+##### Best fitting model #####
 
 
 # Get output vector for glmnet
@@ -455,7 +453,7 @@ countries <- c(figure6="Malawi",figure7="Tanzania")
 boot_outs <- list()
 
 for(fig_name in names(countries)){
-  # fig_name <- "figure7"
+  # fig_name <- "figure6"
   fig_country <- countries[fig_name]
   
   # subset each country
@@ -534,10 +532,6 @@ for(fig_name in names(countries)){
   # Get the new predictions in matrix format
   nx <- model.matrix(full.model.formula,iep %>% mutate(corr=0))[,-1]
   
-  
-  
-  
-  
   # Make predictions
   
   
@@ -546,56 +540,8 @@ for(fig_name in names(countries)){
     as.data.frame %>% 
     set_colnames("PredictedAdj")
   
-  # # Function to compute prediction SEs for glmnet.
-  # 
-  # glmnet_prediciton_se <- function(xnew,xs,y,yhat,my_mod){
-  # 
-  # 
-  #   # Note, you can't estimate an intercept here
-  # 
-  #   # Betas' covariance matrix (Tibshirani, 1996)
-  # 
-  #   n <- dim(xs)[1]
-  # 
-  #   # Number of coefficients that are not 0 minus 1 for the intercept
-  # 
-  #   k <- coefficients(best.fitting.model,s = "lambda.min") %>% as.matrix %>% equals(0) %>% not %>% sum %>% add(-1)
-  # 
-  #   # residual variance.
-  # 
-  #   sigma_sq <- sum((y-yhat)^2)/ (n-k)
-  # 
-  #   i_lams <- Matrix(diag(x=1,nrow=dim(xs)[2],ncol=dim(xs)[2]),sparse=TRUE)
-  # 
-  #   xpx <- t(xs)%*%xs
-  # 
-  #   lam <- MASS::ginv(as.matrix(abs(as.vector(coef.cv.glmnet(my_mod,s="lambda.min")))[-1]*i_lams))
-  # 
-  #   xpxinvplam <- solve(xpx+my_mod$lambda.min*lam)
-  # 
-  #   var_cov_beta <- sigma_sq*(xpxinvplam %*% xpx %*% xpxinvplam)
-  # 
-  # 
-  #   # Prefiction variance
-  # 
-  #   var_pred <- diag(nx %*% var_cov_beta %*% t(nx))
-  # 
-  #   h <- var_pred/sigma_sq
-  # 
-  #   # We are making predicitions on a new observation, so se is sigma*sqrt(1+h) isntead of sigma*sqrt(h)
-  # 
-  #   se_pred <- sqrt(sigma_sq)*sqrt(1+h)
-  # 
-  # 
-  #   print('NOTE: These standard errors are very biased.')
-  #   return(se_pred)
-  # }
-  # 
-  # l_yhat <- predict(best.fitting.model,newx = x,s="lambda.min")
-  # 
-  # prediction %<>% mutate(ci=qt(1-0.025,df = dim(x)[1]-dim(x)[2])*glmnet_prediciton_se(xn,x,y,l_yhat,best.fitting.model))
 
-  # Bootstrap
+  # Bootstrap confidente intervals for predictions
   
   # Get output vector for glmnet
   
@@ -614,8 +560,8 @@ for(fig_name in names(countries)){
     
     X <- xy[,2:(dim(xy)[2])]
     Y <- xy[,1]
-    set.seed(300)
-    m <- cv.glmnet(X,Y,family="gaussian",alpha=glmnet_alpha)
+    
+    m <- glmnet(X,Y,family="gaussian",alpha=glmnet_alpha,lambda=lambda)
     
     
     predict(m,newx = nx,s="lambda.min") %>% as.vector
@@ -623,28 +569,21 @@ for(fig_name in names(countries)){
   }
   
   
-  
-  print("Computing bootstrap prediction intervals, this can be high time consuming.")
- 
   boot_outs[[fig_name]] <- lapply(1:nrow(nx),function(i){
-    print(i)
-    print(Sys.time())
+    
     new_data <- nx[i,,drop=FALSE]
     
-    #i <- 1
     set.seed(600)
+    
     bcajack(x=Xy,B=1000,func=theta,new_data,1.0,lambda)
   })
+  
  
   ci <- boot_outs[[fig_name]] %>% lapply(function(r){
     
     r$lims %>% as.data.frame() %>% mutate(quantile=as.numeric(rownames(.))) %>% filter(quantile %in% c(0.025,0.975)) %>% select(quantile,bca) %>% mutate(quantile=case_when(quantile==0.025 ~ "ci.lo",TRUE~ "ci.hi")) %>% spread(quantile,bca)
   }) %>% bind_rows()
   
-  pr <- boot_outs[[fig_name]] %>% lapply(function(r){
-    
-    r$stats[1,"theta"] 
-  }) %>% unlist()
   
   prediction %<>% bind_cols(ci)
   
