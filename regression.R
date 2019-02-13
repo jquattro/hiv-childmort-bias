@@ -527,14 +527,13 @@ for(fig_name in names(countries)){
   # the estimates from our model
   
   
+  # Model predictions
  
   
   # Get the new predictions in matrix format
   nx <- model.matrix(full.model.formula,iep %>% mutate(corr=0))[,-1]
   
   # Make predictions
-  
-  
   
   prediction <- predict(best.fitting.model,newx = nx,se=TRUE,s="lambda.min") %>% 
     as.data.frame %>% 
@@ -555,20 +554,21 @@ for(fig_name in names(countries)){
   
   Xy <-  cbind(y,x)
   
- 
+  # This is the function that we will use for each bootstrap sample
   theta <- function(xy,nx,glmnet_alpha,lambda){
     
     X <- xy[,2:(dim(xy)[2])]
     Y <- xy[,1]
     
+    # Fit the model for the sample and using the same lambda as in the best model fitted
     m <- glmnet(X,Y,family="gaussian",alpha=glmnet_alpha,lambda=lambda)
     
-    
+    # Prediction
     predict(m,newx = nx,s="lambda.min") %>% as.vector
     
   }
   
-  
+  # Compute bootstrapped confedence intervals for each prediction point
   boot_outs[[fig_name]] <- lapply(1:nrow(nx),function(i){
     
     new_data <- nx[i,,drop=FALSE]
@@ -578,7 +578,7 @@ for(fig_name in names(countries)){
     bcajack(x=Xy,B=1000,func=theta,new_data,1.0,lambda)
   })
   
- 
+  # Get two tailed 95% CI values 
   ci <- boot_outs[[fig_name]] %>% lapply(function(r){
     
     r$lims %>% as.data.frame() %>% mutate(quantile=as.numeric(rownames(.))) %>% filter(quantile %in% c(0.025,0.975)) %>% select(quantile,bca) %>% mutate(quantile=case_when(quantile==0.025 ~ "ci.lo",TRUE~ "ci.hi")) %>% spread(quantile,bca)
@@ -588,15 +588,15 @@ for(fig_name in names(countries)){
   prediction %<>% bind_cols(ci)
   
   
-  
+  # Prepare data for plot
   to.plot <- bind_cols(iep, prediction,data.frame(fiveq0WZ=fiveq0WZ)) %>% 
     mutate(fit=fiveq0_surv+PredictedAdj,lwr=fiveq0_surv+ci.lo,upr=fiveq0_surv+ci.hi)%>% # Compute adjusted values and prediction interval upper and lower limits
     select(refdate,upr,lwr,Adjusted=fit,Unadjusted=fiveq0_surv,`Ward & Zaba`=fiveq0WZ) %>% # Transform data for plot
     gather(type,value,-refdate,-upr,-lwr)
   
+  # Plot
   ggplot(to.plot,aes(x=refdate,y=value,shape=type)) +
     geom_point(color="black", size=3) +
-    #ylim(min(m4$lwr)-.03,max(fiveq0WZ)+0.03)+
     geom_errorbar(aes(ymin=lwr, ymax=upr))+ 
     xlab("Year") +
     ylab("Under-five mortality (deaths per live birth)") +
