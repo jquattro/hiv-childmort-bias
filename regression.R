@@ -117,7 +117,7 @@ compute_error_measures <- function(y,prediction,method,sample){
 
 to.model <- nbd2k %>% mutate(
   agegroup=as.factor(agegroup)) 
-  
+
 
 
 full.model.formula <- corr ~ fiveq0_surv + agegroup + agegroup*hiv1990 + agegroup*hiv2000+  agegroup*hiv2010 + 
@@ -223,32 +223,32 @@ error_table %<>% bind_rows(compute_error_measures(test.sample$corr,prediction,"B
 set.seed(500)
 glmnet.errors <- lapply(c(0,0.5,1.0),function(alpha){
   
-    
-    # Get output vector for glmnet
-    
-    y <- train.sample %>% pull(all.vars(full.model.formula)[1])
-    
-    
-    # Get predictors for glmnet
-    
-    x <- model.matrix(full.model.formula,train.sample)[,-1]
-    
-    set.seed(500)
-    fit <- cv.glmnet(x,y,family="gaussian",alpha=alpha)
-      
-      
-      prediction <- predict(fit,newx = x,s = "lambda.min")
-      
-      train.error <- compute_error_measures(train.sample$corr,prediction,paste0("glmnet, alpha=",alpha),"in-sample")
-      
-      xnew <- model.matrix(full.model.formula,test.sample)[,-1]
-      
-      prediction <- predict(fit,newx = xnew,s = "lambda.min")
-      
-      test.error <- compute_error_measures(test.sample$corr,prediction,paste0("glmnet, alpha=",alpha),"out-of-sample")
-      
-      bind_rows(train.error,test.error)
-    
+  
+  # Get output vector for glmnet
+  
+  y <- train.sample %>% pull(all.vars(full.model.formula)[1])
+  
+  
+  # Get predictors for glmnet
+  
+  x <- model.matrix(full.model.formula,train.sample)[,-1]
+  
+  set.seed(500)
+  fit <- cv.glmnet(x,y,family="gaussian",alpha=alpha)
+  
+  
+  prediction <- predict(fit,newx = x,s = "lambda.min")
+  
+  train.error <- compute_error_measures(train.sample$corr,prediction,paste0("glmnet, alpha=",alpha),"in-sample")
+  
+  xnew <- model.matrix(full.model.formula,test.sample)[,-1]
+  
+  prediction <- predict(fit,newx = xnew,s = "lambda.min")
+  
+  test.error <- compute_error_measures(test.sample$corr,prediction,paste0("glmnet, alpha=",alpha),"out-of-sample")
+  
+  bind_rows(train.error,test.error)
+  
 }) %>% bind_rows()
 
 error_table %<>% bind_rows(glmnet.errors)
@@ -261,7 +261,7 @@ fit <- pcr(full.model.formula,data=train.sample,scale=TRUE,validation="CV", jack
 ncomps <- c(20,30,selectNcomp(fit,method="onesigma",plot=TRUE)) %>% sort
 
 pcr_errors <- lapply(ncomps,function(ncomp){
-
+  
   prediction <- predict(fit,newdata = train.sample, type = "response",ncomp = ncomp)
   
   train.error <- compute_error_measures(train.sample$corr,prediction,paste0("PCR, ncomp=",ncomp),"in-sample")
@@ -271,7 +271,7 @@ pcr_errors <- lapply(ncomps,function(ncomp){
   test.error <- compute_error_measures(test.sample$corr,prediction,paste0("PCR, ncomp=",ncomp),"out-of-sample")
   
   bind_rows(train.error,test.error)
-    
+  
 }) %>% bind_rows()
 
 
@@ -441,16 +441,27 @@ ggsave("figures/figure5.png",width = 7,height = 5)
 
 
 
-###################################################################
-### APPLICATION TO DHS DATA
-##################################################################
+
+##### APPLICATION TO DHS DATA #####
 
 # import empirical data
 fv <- fread("./data/facevalidity.csv") %>% set_colnames(c("country","agegroup", "ceb","cs","tfr2010","tfr2000","hiv1990", "hiv2000", "hiv2010","art2005","art2006","art2007","art2008","art2009","art2010","art2011","art_prev2005","art_prev2006","art_prev2007","art_prev2008","art_prev2009","prop15to19_2010","prev15to19_2010","hiv2005","hiv2006","hiv2007","hiv2008","hiv2009")) %>% mutate(cd=ceb-cs)
 
-countries <- c(figure6="Malawi",figure7="Tanzania")
+##### Figures 6, 7 and table#####
 
-boot_outs <- list()
+# Load bootstrap estimates for model predictions
+
+if(file.exists("results/boot_outs.RData")){
+  load("results/boot_outs.RData")
+}else{
+  boot_outs <- list()  
+}
+
+
+out_table <-data.frame()
+
+# Each run of the for loop creates one of the figures
+countries <- c(figure6="Malawi",figure7="Tanzania")
 
 for(fig_name in names(countries)){
   # fig_name <- "figure6"
@@ -487,7 +498,7 @@ for(fig_name in names(countries)){
     select(-cd)
   
   
- 
+  
   
   # also need nq0 from results of indirect_estimates_functions (see line 30 below)
   # may need to edit indirect_estimates_functions to output nq0 as part of ind_est
@@ -528,7 +539,7 @@ for(fig_name in names(countries)){
   
   
   # Model predictions
- 
+  
   
   # Get the new predictions in matrix format
   nx <- model.matrix(full.model.formula,iep %>% mutate(corr=0))[,-1]
@@ -539,45 +550,45 @@ for(fig_name in names(countries)){
     as.data.frame %>% 
     set_colnames("PredictedAdj")
   
-
+  
   # Bootstrap confidente intervals for predictions
-  
-  # Get output vector for glmnet
-  
-  y <- to.model %>% pull(all.vars(full.model.formula)[1])
-  
-  
-  # Get predictors for glmnet
-  
-  x <- model.matrix(full.model.formula,to.model)[,-1]
-  
-  
-  Xy <-  cbind(y,x)
-  
-  # This is the function that we will use for each bootstrap sample
-  theta <- function(xy,nx,glmnet_alpha,lambda){
+  if(is.null(boot_outs[[fig_name]])){
+    # Get output vector for glmnet
     
-    X <- xy[,2:(dim(xy)[2])]
-    Y <- xy[,1]
+    y <- to.model %>% pull(all.vars(full.model.formula)[1])
     
-    # Fit the model for the sample and using the same lambda as in the best model fitted
-    m <- glmnet(X,Y,family="gaussian",alpha=glmnet_alpha,lambda=lambda)
     
-    # Prediction
-    predict(m,newx = nx,s="lambda.min") %>% as.vector
+    # Get predictors for glmnet
     
+    x <- model.matrix(full.model.formula,to.model)[,-1]
+    
+    
+    Xy <-  cbind(y,x)
+    
+    # This is the function that we will use for each bootstrap sample
+    theta <- function(xy,nx,glmnet_alpha,lambda){
+      
+      X <- xy[,2:(dim(xy)[2])]
+      Y <- xy[,1]
+      
+      # Fit the model for the sample and using the same lambda as in the best model fitted
+      m <- glmnet(X,Y,family="gaussian",alpha=glmnet_alpha,lambda=lambda)
+      
+      # Prediction
+      predict(m,newx = nx,s="lambda.min") %>% as.vector
+      
+    }
+    
+    # Compute bootstrapped confedence intervals for each prediction point
+    boot_outs[[fig_name]] <- lapply(1:nrow(nx),function(i){
+      
+      new_data <- nx[i,,drop=FALSE]
+      
+      set.seed(600)
+      
+      bcajack(x=Xy,B=1000,func=theta,new_data,1.0,lambda)
+    })
   }
-  
-  # Compute bootstrapped confedence intervals for each prediction point
-  boot_outs[[fig_name]] <- lapply(1:nrow(nx),function(i){
-    
-    new_data <- nx[i,,drop=FALSE]
-    
-    set.seed(600)
-    
-    bcajack(x=Xy,B=1000,func=theta,new_data,1.0,lambda)
-  })
-  
   # Get two tailed 95% CI values 
   ci <- boot_outs[[fig_name]] %>% lapply(function(r){
     
@@ -606,11 +617,45 @@ for(fig_name in names(countries)){
     theme_classic() +
     theme(axis.text = element_text(color="black"))
   
-  
+  # save the figure
   ggsave(paste0("./figures/",fig_name,".png"),width = 7,height = 5,dpi=300)
   
   
+  # Table
   
-    
+  to.print <- bind_cols(iep, prediction,data.frame(fiveq0WZ=fiveq0WZ)) %>% 
+    mutate(fit=fiveq0_surv+PredictedAdj,lwr=fiveq0_surv+ci.lo,upr=fiveq0_surv+ci.hi,Country=countries[fig_name])%>% # Compute adjusted values and prediction interval upper and lower limits
+    select(Country,agegroup,upr,lwr,Adjusted=fit,Unadjusted=fiveq0_surv,WZ=fiveq0WZ)
+  
+  out_table %<>% bind_rows(to.print)
+  
 }
 
+# Save the bootstrap estimates
+
+if(!file.exists("results/boot_outs.RData")){
+  save(boot_outs,file = "results/boot_outs.RData")
+}
+
+# Format the table with figure 6 and 7 data
+
+ft <- out_table %>% 
+  mutate(Adjusted=sprintf("%0.4f\n(%0.4f,%0.4f)",Adjusted,lwr,upr),
+         Unadjusted=sprintf("%0.4f",Unadjusted),
+         WZ=sprintf("%0.4f",WZ)) %>% # Format values
+  select(-upr,-lwr) %>%
+  flextable()%>%
+  merge_v(j=1) %>% # Merge countries
+  align(j=2:5,align = "center",part = "all") %>% # Center
+  set_header_labels(agegroup="Age Group",WZ="Ward & Zaba") %>% # Better header labels
+  width(width = 1.5) # Set cell width
+
+# Save table in a Word document
+
+doc <- read_docx()
+
+
+doc %<>% body_add_flextable(ft)
+
+
+doc %>% print("tables/fig_6_7_data.docx")
