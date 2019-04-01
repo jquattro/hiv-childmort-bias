@@ -344,6 +344,8 @@ lambda <-best.fitting.model$lambda.min
 
 best.fitting.model <- glmnet(x,y,family="gaussian",alpha=alpha,lambda = lambda)
 
+save(x,best.fitting.model,full.model.formula,file="results/best_fitting_model.RData")
+
 ##### Figure 4 #####
 
 # Compute prediction. Use the mean for numerical values
@@ -565,6 +567,18 @@ for(fig_name in names(countries)){
     
     Xy <-  cbind(y,x)
     
+    # boot_models <- list()
+    t0 <- predict(best.fitting.model,newx = new_data,s="lambda.min") %>% as.vector
+    tt <- boot_models[1:500] %>%purrr::map(~predict(.,newx = new_data,s="lambda.min") %>% as.vector) %>% unlist()
+    lambda <- best.fitting.model$lambda.min
+    theta <- as.matrix(coef(best.fitting.model, s = lambda))
+    pi_hat <- predict(best.fitting.model, newx = x, s = "lambda.min", type = "response")
+    n <- length(pi_hat)
+    y_star <- sapply(seq_len(length(tt)), function(i) ifelse(runif(n) <= pi_hat, 1, 0))
+    suff_stat <- t(y_star) %*% x
+    
+    bcapar(t0=t0,tt=tt,bb=suff_stat)
+    
     # This is the function that we will use for each bootstrap sample
     theta <- function(xy,nx,glmnet_alpha,lambda){
       
@@ -574,6 +588,8 @@ for(fig_name in names(countries)){
       # Fit the model for the sample and using the same lambda as in the best model fitted
       m <- glmnet(X,Y,family="gaussian",alpha=glmnet_alpha,lambda=lambda)
       
+      # boot_models <<- c(boot_models,list(m))
+      
       # Prediction
       predict(m,newx = nx,s="lambda.min") %>% as.vector
       
@@ -581,7 +597,7 @@ for(fig_name in names(countries)){
     
     # Compute bootstrapped confedence intervals for each prediction point
     boot_outs[[fig_name]] <- lapply(1:nrow(nx),function(i){
-      
+      # i <- 1
       new_data <- nx[i,,drop=FALSE]
       
       set.seed(600)
