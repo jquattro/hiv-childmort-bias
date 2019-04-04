@@ -220,6 +220,10 @@ g_d <- ggplot(to.plot,aes(x=year,y=hiv_inc)) +
 
 ##### Arrange panels in one figure and save #####
 
+# Make sure that labels are always in the same place.
+set.seed(100)
+
+
 figure_1 <- arrangeGrob(g_a_title,g_a,g_b_title,g_b,g_c_title,g_c,g_d_title,g_d,
              layout_matrix=matrix(c(1,3,
                                     2,4,
