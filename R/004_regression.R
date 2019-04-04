@@ -1,3 +1,5 @@
+rm(list=ls())
+
 if(!require(bcaboot)){
   install.packages("bcaboot",dependencies = TRUE,repos='http://cran.us.r-project.org')
 }
@@ -56,6 +58,8 @@ if(!require(tidyverse)){
 
 require(tidyverse)
 
+
+# Get data for initial population 22,500
 
 load("./results/regdata/p22500/regdata_all.Rdata")
 load("./results/models/p22500/inputs.RData")
@@ -308,7 +312,7 @@ pls_errors <- lapply(ncomps,function(ncomp){
 
 error_table %<>% bind_rows(pls_errors)
 
-# Save table
+# Save error table
 
 ft <- error_table  %>% 
   mutate_at(vars(one_of("rmse","rmedse")),funs(sprintf("%0.6f",.))) %>%
@@ -341,6 +345,8 @@ set.seed(500)
 best.fitting.model <- cv.glmnet(x,y,family="gaussian",alpha=alpha)
 
 lambda <-best.fitting.model$lambda.min
+
+# To use for predictions later.
 
 best.fitting.model <- glmnet(x,y,family="gaussian",alpha=alpha,lambda = lambda)
 
@@ -567,7 +573,7 @@ for(fig_name in names(countries)){
     
     Xy <-  cbind(y,x)
     
-    # boot_models <- list()
+    
     t0 <- predict(best.fitting.model,newx = new_data,s="lambda.min") %>% as.vector
     tt <- boot_models[1:500] %>%purrr::map(~predict(.,newx = new_data,s="lambda.min") %>% as.vector) %>% unlist()
     lambda <- best.fitting.model$lambda.min
@@ -588,12 +594,16 @@ for(fig_name in names(countries)){
       # Fit the model for the sample and using the same lambda as in the best model fitted
       m <- glmnet(X,Y,family="gaussian",alpha=glmnet_alpha,lambda=lambda)
       
+      # Keep the models computed for each bootstrap sample in order to compute prediction intervals faster
       # boot_models <<- c(boot_models,list(m))
       
       # Prediction
       predict(m,newx = nx,s="lambda.min") %>% as.vector
       
     }
+    
+    # Keep the models computed for each bootstrap sample in order to compute prediction intervals faster
+    # boot_models <- list()
     
     # Compute bootstrapped confedence intervals for each prediction point
     boot_outs[[fig_name]] <- lapply(1:nrow(nx),function(i){
@@ -605,6 +615,7 @@ for(fig_name in names(countries)){
       bcajack(x=Xy,B=1000,func=theta,new_data,1.0,lambda)
     })
   }
+  
   # Get two tailed 95% CI values 
   ci <- boot_outs[[fig_name]] %>% lapply(function(r){
     

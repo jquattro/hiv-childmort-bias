@@ -1,22 +1,30 @@
-source("simulation_functions.R")
+system('docker stop $( docker ps -f "name=redis-server" -q)')
+system("docker container prune -f")
+rm(list=ls())
 
-source("indirect_estimates_functions.R")
+###############################################################################
+# Name: 001_simulation
+# Author: John Quattrochi (john.quattrochi@gmail.com)
+# Assistant: Juan Luis Herrera Cortijo (juan.luis.herrera.cortijo@gmail.com)
+# Purpose: Run simulations and collect data.
+# The script assumes the following folder structure:
+# Scripts are stored in "[project folder]/R"
+# Data are stored in "[project folder]/data"
+# Results are stored in "[project folder]/results"
+###############################################################################
 
-if(!dir.exists("./results/figdata")){
-  dir.create("./results/figdata",recursive = TRUE)
+source("R/simulation_functions.R")
+
+source("R/indirect_estimates_functions.R")
+
+
+if(!require(tidyverse)){
+  install.packages("tidyverse",dependencies = TRUE,repos='http://cran.us.r-project.org')
 }
 
-if(!dir.exists("./results/regdata")){
-  dir.create("./results/regdata",recursive = TRUE)
-}
 
-if(!require(dplyr)){
-  install.packages("dplyr",dependencies = TRUE,repos='http://cran.us.r-project.org')
-}
-
-
-require(dplyr)
-
+require(tidyverse)
+packageVersion("tidyverse")
 
 if(!require(foreach)){
   install.packages("foreach",dependencies = TRUE,repos='http://cran.us.r-project.org')
@@ -37,37 +45,77 @@ if(!require(parallel)){
 
 require(parallel)
 
-# The code in this script does an extensive use of the foreach package for better performance we need to register a 
+
+
+# The code in this script does parallel processing and we need to register a 
 # parallel backend. Here we use the doRedis package that offers an interface to a Redis server installed
-# on the computer. The number of workers should be adjusted to the memory and cpu resources on the computer.
-# 
+# on a docker. The number of workers should be adjusted to the memory and cpu resources on the computer. Please
+# visit https://docs.docker.com to learn how to install docker on your computer
+
 if(!require(doRedis)){
   install.packages("doRedis",dependencies = TRUE,repos='http://cran.us.r-project.org')
 }
 require(doRedis)
+packageVersion("doRedis")
+# 1.1.1
 
+# Stop the Redis docker
+system('docker stop $( docker ps -f "name=redis-server" -q)')
+
+# Remove the Redis docker
+system('docker container rm -f  $( docker ps -f "name=redis-server" -q -a)')
+
+# Start the Redis docker
+system("docker run --name redis-server --publish 6379:6379 --hostname=redis --restart=on-failure --detach redis:latest ")
+
+Sys.sleep(5)
+
+# Connect to Redis
 redisConnect()
+Sys.sleep(5)
+# Remove the queue, just in case
+removeQueue("hiv_simultions")
+Sys.sleep(5)
+# Register a queue
+registerDoRedis("hiv_simultions")
+Sys.sleep(5)
+# How many cores do we have?
+cores_used <- detectCores()
 
-removeQueue("process")
-
-registerDoRedis("process")
-
-startLocalWorkers(n=detectCores(),queue="process")
-
+# Start one worker per core
+startLocalWorkers(n=cores_used,queue="hiv_simultions")
+Sys.sleep(5)
+# Extra options.
 options('redis:num'=TRUE)
+
+##### DEFINE FOLDERS #######
+
+if(!dir.exists("results/figdata")){
+  dir.create("results/figdata",recursive = TRUE)
+}
+
+if(!dir.exists("results/regdata")){
+  dir.create("results/regdata",recursive = TRUE)
+}
+
+# Simulation results will be stored here
+
+if(!dir.exists("results/models")){
+  dir.create("results/models",recursive = TRUE)
+}
 
 ##### SIMULATION #####
 
 # Read data
 
-hivhogan = read.csv("./data/inc_curves.csv",head=TRUE)
-mort_series = read.csv("./data/IHME_female_mortSMALL.csv",head=TRUE)
-adultmort = read.csv("./data/MLTfemSMALL.csv",head=TRUE)
-worldfert= read.csv("./data/world_fert.csv",head=TRUE)
-tfr_series= read.csv("./data/tfr_gapminder_long.csv",head=TRUE)
-art_series= read.csv("./data/sampleART.csv",head=TRUE)
-u5m_edit= read.csv("./data/u5m_edit.csv",head=TRUE)
-matmort = read.csv("./data/matmort.csv",head=TRUE)
+hivhogan = read.csv("data/inc_curves.csv",head=TRUE)
+mort_series = read.csv("data/IHME_female_mortSMALL.csv",head=TRUE)
+adultmort = read.csv("data/MLTfemSMALL.csv",head=TRUE)
+worldfert= read.csv("data/world_fert.csv",head=TRUE)
+tfr_series= read.csv("data/tfr_gapminder_long.csv",head=TRUE)
+art_series= read.csv("data/sampleART.csv",head=TRUE)
+u5m_edit= read.csv("data/u5m_edit.csv",head=TRUE)
+matmort = read.csv("data/matmort.csv",head=TRUE)
 
 
 
@@ -78,9 +126,6 @@ hivhogan[63,c(2:47)]=0
 
 
 # Create parameters sets
-
-
-
 
 fertcountry <- c("Botswana","Uganda")
 cm_cntry <-  c("Mali","Morocco")
@@ -106,67 +151,77 @@ threshold <- 200
 inputs <- expand.grid(fertcountry, cm_cntry, am_cntry, sexactive15,mmr0,mmr_dec,curve,bfeed,art_col,growth,yrend,yrstart,threshold)
 names(inputs) = c("fertcountry", "cm_cntry","am_cntry","sexactive15","mmr0","mmr_dec","curve","bfeed","art_col","growth","yrend","yrstart","threshold")
 
+# Save the inputs set for later
+
 save(inputs,file = "results/models/inputs.RData")
 
 file_number_format <- paste0("%0",nchar(as.character(nrow(inputs))),"d")
 
-# Parameter sets already processed
 
-# psets_already <- table(
-#   c(
-#    as.integer(gsub("regdata\\.|\\.Rdata","",list.files("./results/regdata",pattern = "regdata.\\d+",full.names = FALSE))),
-#    as.integer(gsub("figdata\\.|\\.Rdata","",list.files("./results/figdata",pattern = "figdata.\\d+",full.names = FALSE))))
-# 
-# )
-# 
-# psets_already <- data.frame(psets_already)
-# 
-# psets_already <- as.integer(as.character(psets_already[psets_already$Freq==2,"Var1"]))
 
-psets_already <- as.integer(gsub("models|\\.Rdata","",list.files("./results/models",pattern = "models\\d+",full.names = FALSE)))
+# Set size of initial population
 
-psets_to_process <- setdiff(1:nrow(inputs),psets_already)
-
-#Set size of initial population
-
-ip<- 22500
+initial_populations<- c(7500,15000,22500)
 
 years <- c(1906:2010)
 ages <- c(0:120)
 
+# Run the simulations for each initial population
 
-# Run simulation for each set of parameters
-
-foreach(pset=psets_to_process,.packages = c("dplyr")) %dopar%{
-  # pset <- psets_to_process[1]
-  inp <- inputs[pset,]
+for(ip in initial_populations){
   
-  source("simulation_functions.R")
+  # Parameter sets already processed
   
-  source("indirect_estimates_functions.R")
+  psets_already <- as.integer(gsub("models|\\.Rdata","",list.files(paste0("./results/models/p",ip),pattern = "models\\d+",full.names = FALSE)))
   
+  psets_to_process <- setdiff(1:nrow(inputs),psets_already)
   
+  # Run simulation for each set of parameters
   
-  # Generate population
-  set.seed(1000)
-  results <- bigsim(inp,initialpop=ip,years,ages,hivhogan,mort_series,adultmort,worldfert,tfr_series,art_series,u5m_edit,matmort)
+  foreach(pset=psets_to_process,.packages = c("dplyr")) %dopar%{
+    
+    inp <- inputs[pset,]
+    
+    source("R/simulation_functions.R")
+    
+    source("R/indirect_estimates_functions.R")
+    
+    
+    
+    # Run simmulation
+    set.seed(1000)
+    results <- bigsim(inp,initialpop=ip,years,ages,hivhogan,mort_series,adultmort,worldfert,tfr_series,art_series,u5m_edit,matmort)
+    
+    # Save simulation results
+    save(results,file=file.path(paste0("./results/models/p",ip),paste("models",sprintf(file_number_format,pset),".Rdata",sep="")))
+  }
   
-  save(results,file=file.path("results/models",paste("models",sprintf(file_number_format,pset),".Rdata",sep="")))
 }
 
+# Collect hiv2000 differences among initial populations
 
-hiv2000 <- foreach(pset=psets_to_process,.packages = c("dplyr")) %dopar%{
-  # pset <- psets_to_process[1]
-  
-  c("p7500","p15000","p22500") %>% lapply(function(popini){
+# For each input row
+
+hiv2000 <- foreach(pset=1:nrow(inputs),.packages = c("dplyr")) %dopar%{
+
+  # And each initial population
+  paste0("p",initial_populations) %>% lapply(function(popini){
+    
+    # Load the results file for that initial population and input set
+    
     load(file.path("results/models/",popini,paste("models",sprintf(file_number_format,pset),".Rdata",sep="")))
+    
+    # Extract the value of hiv2000
     r <- results[[1]]$hiv2000
+    
     names(r) <- popini
     r
-  }) %>% unlist() %>% t %>% data.frame(input_set=pset,.)
+  }) %>% unlist() %>% t %>% data.frame(input_set=pset,.) # Put everything in one data.frame
   
   
 } %>% bind_rows
+
+# Compute difference
 
 hiv2000 <- hiv2000 %>% mutate(p7500_minus_p15000=p7500-p15000,p15000_minus_p22500=p15000-p22500)
 
@@ -174,20 +229,23 @@ save(hiv2000,file = "results/hiv2000.RData")
 
 
 
-##### INDIRECT ESTIMATES #####
+##### INDIRECT ESTIMATES FOR INITAL POPULATION 22500 #####
+
+# See if we have something not processed
 
 psets_already <- intersect(as.integer(gsub("figdata.|\\.Rdata","",list.files("./results/figdata/p22500",pattern = "figdata.\\d+",full.names = FALSE))),
                            as.integer(gsub("regdata.|\\.Rdata","",list.files("./results/regdata/p22500",pattern = "regdata.\\d+",full.names = FALSE))))
 
 psets_to_process <- setdiff(1:nrow(inputs),psets_already)
 
+# For each input set not processed
 
 foreach(pset=psets_to_process,.packages = c("dplyr")) %dopar%{
-  # pset <- psets_to_process[1]
+  
   source("indirect_estimates_functions.R")
   
-    load(file.path("results/models/p22500",paste("models",sprintf(file_number_format,pset),".Rdata",sep="")))
-
+  load(file.path("results/models/p22500",paste("models",sprintf(file_number_format,pset),".Rdata",sep="")))
+  
   
   w <- results[[7]]
   
@@ -219,19 +277,18 @@ foreach(pset=psets_to_process,.packages = c("dplyr")) %dopar%{
   ###################################################################
   
   
-inp.plus <- as.data.frame(results[1])    
-regdata <- cbind(ie.three,inp.plus[1,])
-figdata <- results[c(2:6,8:9)]
-
-# tfr,art_cov[c(2000:2010)],hiv_prev[c(1980:2010)],hivdeathrate,inp,art_prev[c(2000:2010)],hiv_inc[c(1980:2010)]
-
-save(regdata,file=file.path("results/regdata/p22500",paste("regdata.",sprintf(file_number_format,pset),".Rdata",sep="")))
-save(figdata,file=file.path("results/figdata/p22500",paste("figdata.",sprintf(file_number_format,pset),".Rdata",sep="")))
-
-rm(results,regdata,figdata,momkidsclean,isf,isf_all,isf_hiv,ie.three)
+  inp.plus <- as.data.frame(results[1])    
+  regdata <- cbind(ie.three,inp.plus[1,]) # Data for regressions
+  figdata <- results[c(2:6,8:9)] # Data for figures
+  
+  
+  save(regdata,file=file.path("results/regdata/p22500",paste("regdata.",sprintf(file_number_format,pset),".Rdata",sep="")))
+  save(figdata,file=file.path("results/figdata/p22500",paste("figdata.",sprintf(file_number_format,pset),".Rdata",sep="")))
+  
+  rm(results,regdata,figdata,momkidsclean,isf,isf_all,isf_hiv,ie.three)
 }
 
-##### COLLECT DATA FROM ALL SIMULATIONS #####
+##### COLLECT DATA FROM ALL SIMULATIONS FOR INITIAL POPULATION 22500 #####
 
 
 # Merge regdata
@@ -239,7 +296,7 @@ rm(results,regdata,figdata,momkidsclean,isf,isf_all,isf_hiv,ie.three)
 psets_to_process <- as.integer(gsub("regdata.|\\.Rdata","",list.files("./results/regdata/p22500",pattern = "regdata.\\d+",full.names = FALSE))) %>% sort
 
 nbd2k <- psets_to_process %>% lapply(function(pset){
-  # pset <- 1
+  
   filename <- file.path("results/regdata/p22500",paste("regdata.",sprintf(file_number_format,pset),".Rdata",sep=""))
   tryCatch({
     load(filename)
@@ -250,7 +307,7 @@ nbd2k <- psets_to_process %>% lapply(function(pset){
 }) %>% bind_rows() %>% as.data.frame()
 
 
-save(nbd2k,file="./results/regdata/p22500/regdata_all.Rdata")
+save(nbd2k,file="results/regdata/p22500/regdata_all.Rdata")
 
 # Merge figdata
 
@@ -264,20 +321,19 @@ inps <- list()
 arp <- list()
 hivinc <- list()
 
-psets_to_process <- as.integer(gsub("figdata.|\\.Rdata","",list.files("./results/figdata/p22500",pattern = "figdata.\\d+",full.names = FALSE))) %>% sort
+psets_to_process <- as.integer(gsub("figdata.|\\.Rdata","",list.files("results/figdata/p22500",pattern = "figdata.\\d+",full.names = FALSE))) %>% sort
 
 for(pset in psets_to_process){
-  # pset <- 1
+
   filename <- file.path("results/figdata/p22500",paste("figdata.",sprintf(file_number_format,pset),".Rdata",sep=""))
   tryCatch({
     load(filename)
-    # tfr,art_cov[c(2000:2010)],hiv_prev[c(1980:2010)],hivdeathrate,inp,art_prev[c(2000:2010)],hiv_inc[c(1980:2010)]  
+  
     
     h[[pset]] <- figdata[[3]]
     tf[[pset]] <- figdata[[1]]
     ar[[pset]] <- figdata[[2]]
     hd[[pset]] <- figdata[[4]]
-    #u5m[[pset]] <- figdata[[5]]
     inps[[pset]] <- figdata[[5]]
     arp[[pset]] <- figdata[[6]]
     hivinc[[pset]] <- figdata[[7]]
@@ -286,7 +342,11 @@ for(pset in psets_to_process){
   }, error=function(e){cat("ERROR :",conditionMessage(e), "\n")})
 }
 
-save(h,tf,ar,hd,u5m,inps,arp,file="./results/figdata/p22500/figdata_all.Rdata")
+save(h,tf,ar,hd,u5m,inps,arp,file="results/figdata/p22500/figdata_all.Rdata")
 
+##### Clean #####
 
+system("kill $(ps -xa|grep 'exec/R'|awk '{print $1}')")
 
+system('docker stop $( docker ps -f "name=redis-server" -q)')
+system("docker container prune -f")

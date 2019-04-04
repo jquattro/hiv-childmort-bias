@@ -1,3 +1,37 @@
+rm(list=ls())
+
+###############################################################################
+# Name: 002_figures
+# Author: John Quattrochi (john.quattrochi@gmail.com)
+# Assistant: Juan Luis Herrera Cortijo (juan.luis.herrera.cortijo@gmail.com)
+# Purpose: Plots figures 1 to 3
+# The script assumes the following folder structure:
+# Scripts are stored in "[project folder]/R"
+# Data are stored in "[project folder]/data"
+# Results are stored in "[project folder]/results"
+# Figures are saved in "[project folder]/figures"
+###############################################################################
+
+# R version and load packages and install if necessary
+
+# version
+# 
+# _                           
+# platform       x86_64-apple-darwin15.6.0   
+# arch           x86_64                      
+# os             darwin15.6.0                
+# system         x86_64, darwin15.6.0        
+# status                                     
+# major          3                           
+# minor          5.2                         
+# year           2018                        
+# month          12                          
+# day            20                          
+# svn rev        75870                       
+# language       R                           
+# version.string R version 3.5.2 (2018-12-20)
+# nickname       Eggshell Igloo         
+
 if(!require(grid)){
   install.packages("grid",dependencies = TRUE,repos='http://cran.us.r-project.org')
 }
@@ -43,20 +77,31 @@ if(!require(tidyverse)){
 require(tidyverse)
 
 
+##### FIGURE 1 #####
 
 load("results/figdata/p22500/figdata_all.Rdata")
 
+# Get simulation years
+
 years <- lapply(tf,function(x) x[,"year"]) %>% unlist %>% unique
 
-# Total Fertility Rates
+##### Total Fertility Rates Panel #####
+
+# Get the fertility rate countries
 
 fertcntrys <- lapply(inps,function(x) x$fertcountry) %>% unlist %>% unique
+
+# Get total fertility rate series and extract the ones for the years and countries in the simulations
 
 tfr_series= read.csv("./data/tfr_gapminder_long.csv",head=TRUE)
 
 to.plot <- tfr_series %>% filter(country %in% fertcntrys & year %in% years) %>% select(year,country,tfr)
 
+# Panel title
+
 g_a_title <- textGrob("a. Total Fertility Rates",just="left",x=unit(0.1,"npc"),gp = gpar(fontface="bold"))
+
+# Plot the panel and save for later
 
 g_a <-  ggplot(to.plot,aes(x=year,y=tfr,color=country)) + 
   geom_line(size=1) + 
@@ -68,17 +113,25 @@ g_a <-  ggplot(to.plot,aes(x=year,y=tfr,color=country)) +
   ylab("Total fertility rate")+
   ylim(0,10)
 
-# Adult mortality rates
+##### Adult mortality rates panel #####
+
+# Get the adult mortality countries
 
 am_cntrys <- lapply(inps,function(x) x$am_cntry) %>% unlist %>% unique
 
+# Get the adult mortality series
+
 mort_series = read.csv("./data/IHME_female_mortSMALL.csv",head=TRUE)
 
-
+# Extract the adult mortality rates used in the simulations
 
 to.plot <- mort_series %>% filter(country %in% am_cntrys & year %in% years) %>% select(country,year,q45_15)
 
+# Panel title
+
 g_b_title <- textGrob("b. Adult Mortality Rates",just="left",x=unit(0.1,"npc"),gp = gpar(fontface="bold"))
+
+# Plot the panel and sabe for later
 
 g_b <- ggplot(to.plot,aes(x=year,y=q45_15,color=country)) + 
   geom_line(size=1) + 
@@ -91,15 +144,25 @@ g_b <- ggplot(to.plot,aes(x=year,y=q45_15,color=country)) +
   ylim(0,1)
 
 
-# Under five mortality rates
+##### Under five mortality rates panel #####
+
+# Get the countries for the U5MR data
 
 cm_cntrys <- lapply(inps,function(x) x$cm_cntry) %>% unlist %>% unique
 
+# Get the U5MR series
+
 u5m_edit= read.csv("./data/u5m_edit.csv",head=TRUE)
+
+# Extract the U5MR data used in the simulations
 
 to.plot <- u5m_edit %>% filter(country %in% cm_cntrys & year %in% years) %>% select(year,country,q5_0)
 
+# Panel title
+
 g_c_title <- textGrob("c. Under-five Mortality Rates",just="left",x=unit(0.1,"npc"),gp = gpar(fontface="bold"))
+
+# Plot the panel and save for later
 
 g_c <-ggplot(to.plot,aes(x=year,y=q5_0)) + 
   geom_line(aes(color=country),size=1) + 
@@ -113,14 +176,21 @@ g_c <-ggplot(to.plot,aes(x=year,y=q5_0)) +
 
 
 
-# HIV incidence curves
+##### HIV incidence curves panel #####
+
+# Get the countries for the HIV incidence data used in the simulations
 
 hiv_curves_countries <- lapply(inps,function(x) x$curve) %>% unlist %>% unique %>% setdiff("BotUrb2x")
 
+# Get the HIV incidence series
 
 hivhogan = read.csv("./data/inc_curves.csv",head=TRUE) %>% gather(year,hiv_inc,-Country) %>% mutate(year=as.numeric(gsub("X","",year)))
 
+# Extract the HIV incidence data used in the simulations
+
 to.plot <- hivhogan %>% filter(Country %in% hiv_curves_countries) 
+
+# Label the data
 
 label_data <- to.plot %>% filter(year==1996 & Country=="BotswanaUrban" | 
                                    year==1988 & Country=="CamerounRural" | 
@@ -133,9 +203,11 @@ label_data <- to.plot %>% filter(year==1996 & Country=="BotswanaUrban" |
                        stringsAsFactors=FALSE),by="Country") %>%
   mutate(Country= factor(Country,levels=c("BotswanaUrban","CamerounRural","LesothoRural","UgandaRural","MalawiRural"),labels=c("Urban Botswana","Rural Cameroun","Rural Lesotho","Rural Uganda","Rural Malawi")))
 
+# Panel title
+
 g_d_title <- textGrob("d. HIV incidence curves",just="left",x=unit(0.1,"npc"),gp = gpar(fontface="bold"))
 
-
+# Plot the panel and save for later
 
 g_d <- ggplot(to.plot,aes(x=year,y=hiv_inc)) + 
   geom_line(aes(color=Country),size=1) + 
@@ -146,9 +218,7 @@ g_d <- ggplot(to.plot,aes(x=year,y=hiv_inc)) +
   xlab("Year")+
   ylab("HIV incidence")
 
-set.seed(100)
-
-
+##### Arrange panels in one figure and save #####
 
 figure_1 <- arrangeGrob(g_a_title,g_a,g_b_title,g_b,g_c_title,g_c,g_d_title,g_d,
              layout_matrix=matrix(c(1,3,
@@ -164,26 +234,25 @@ ggsave("figures/Figure1.png",width = 8.5,height = 8.5,dpi=300,figure_1)
 
 
 
-# Figure 2
+###### FIGURE 2 #####
 
-
-
-
+# Get the countries for the ART data used in the simulations
 
 art_countries <- lapply(inps,function(x) x$art_col) %>% unlist %>% unique %>% setdiff("zero")
 
+# Get the ART series
 
 art_series= read.csv("./data/sampleART.csv",head=TRUE)
 
-
-
+# Extract the ART data used in the simulations
 to.plot <- art_series   %>% gather(country,art,-yr) %>% rename(year=yr) %>% filter(country %in% art_countries) %>% filter(year>=2000)
 
+# Labe the data
 label_data <- to.plot %>% filter(year==2013) %>%
   mutate(country= factor(country,levels=c("Botswana","Cameroon","Malawi","Bot_dub"),labels=c("Botswana","Cameroon","Malawi","Botswana doubled")))
 
 
-
+# Plot
 
 figure_2 <- ggplot(to.plot,aes(x=year,y=art)) + 
   geom_line(aes(color=country),size=1) + 
@@ -203,12 +272,16 @@ ggsave("figures/Figure2.png",width = 5,height = 5,dpi = 300,figure_2)
 
 
 
-# Figure 3
+##### FIGURE 3 ####
 
 rm(list=ls())
 
+# Load the data
+
 load("./results/regdata/p22500/regdata_all.Rdata")
 load("./results/models/p22500/inputs.RData")
+
+# Plot
 
 figure_3 <- ggplot(nbd2k,aes(x=fiveq0_hiv,y=fiveq0_surv)) + 
   geom_point(alpha=0.25) +
