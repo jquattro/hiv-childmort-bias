@@ -1,9 +1,31 @@
+# R version and load packages and install if necessary
+
+# version
+# 
+# _                           
+# platform       x86_64-apple-darwin15.6.0   
+# arch           x86_64                      
+# os             darwin15.6.0                
+# system         x86_64, darwin15.6.0        
+# status                                     
+# major          3                           
+# minor          5.2                         
+# year           2018                        
+# month          12                          
+# day            20                          
+# svn rev        75870                       
+# language       R                           
+# version.string R version 3.5.2 (2018-12-20)
+# nickname       Eggshell Igloo   
+
 if(!require(officer)){
   install.packages("officer",dependencies = TRUE,repos='http://cran.us.r-project.org')
 }
 
 
 require(officer)
+packageVersion("officer")
+# 0.3.2
 
 if(!require(flextable)){
   install.packages("flextable",dependencies = TRUE,repos='http://cran.us.r-project.org')
@@ -11,6 +33,8 @@ if(!require(flextable)){
 
 
 require(flextable)
+packageVersion("flextable")
+# 0.5.1
 
 if(!require(magrittr)){
   install.packages("magrittr",dependencies = TRUE,repos='http://cran.us.r-project.org')
@@ -18,7 +42,8 @@ if(!require(magrittr)){
 
 
 require(magrittr)
-
+packageVersion("magrittr")
+# 1.5
 
 if(!require(tidyverse)){
   install.packages("tidyverse",dependencies = TRUE,repos='http://cran.us.r-project.org')
@@ -26,7 +51,14 @@ if(!require(tidyverse)){
 
 
 require(tidyverse)
-
+# ── Attaching packages ───────────────────────────────────────────────────────────────────────────── tidyverse 1.2.1 ──
+# ✔ ggplot2 3.1.0       ✔ purrr   0.3.0  
+# ✔ tibble  2.0.1       ✔ dplyr   0.8.0.1
+# ✔ tidyr   0.8.2       ✔ stringr 1.4.0  
+# ✔ readr   1.1.1       ✔ forcats 0.3.0  
+# ── Conflicts ──────────────────────────────────────────────────────────────────────────────── tidyverse_conflicts() ──
+# ✖ dplyr::filter() masks stats::filter()
+# ✖ dplyr::lag()    masks stats::lag()
 
 load("./results/regdata/p22500/regdata_all.Rdata")
 load("./results/models/p22500/inputs.RData")
@@ -49,9 +81,9 @@ nbd2k %<>% mutate(corr=fiveq0_hiv-fiveq0_surv,
                   corr2=corr+2.100105e-05)
 
 
-##########################################################
-# TABLE 2 Summary statistics of population characteristics
-##########################################################
+
+###### TABLE 2 #####
+# Outcomes for simulated populations, summary statistics
 
 
 # Construct variable for HIV deaths/surviving women
@@ -109,10 +141,9 @@ print(doc,"./tables/table2.docx")
 
 
 
-##########################################################
-# TABLE 3 Bias by agegroup
-##########################################################
 
+###### TABLE 3 #####
+# Bias in indirect estimates in 4,480 simulated populations
 
 agegroups <- c("X15_19","X20_24","X25_29","X30_34","X35_39","X40_44","X45_49")
 

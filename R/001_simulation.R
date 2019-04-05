@@ -13,6 +13,27 @@ rm(list=ls())
 # Results are stored in "[project folder]/results"
 ###############################################################################
 
+
+# R version and load packages and install if necessary
+
+# version
+# 
+# _                           
+# platform       x86_64-apple-darwin15.6.0   
+# arch           x86_64                      
+# os             darwin15.6.0                
+# system         x86_64, darwin15.6.0        
+# status                                     
+# major          3                           
+# minor          5.2                         
+# year           2018                        
+# month          12                          
+# day            20                          
+# svn rev        75870                       
+# language       R                           
+# version.string R version 3.5.2 (2018-12-20)
+# nickname       Eggshell Igloo   
+
 source("R/simulation_functions.R")
 
 source("R/indirect_estimates_functions.R")
@@ -25,27 +46,39 @@ if(!require(tidyverse)){
 
 require(tidyverse)
 packageVersion("tidyverse")
+# ── Attaching packages ───────────────────────────────────────────────────────────────────────────── tidyverse 1.2.1 ──
+# ✔ ggplot2 3.1.0       ✔ purrr   0.3.0  
+# ✔ tibble  2.0.1       ✔ dplyr   0.8.0.1
+# ✔ tidyr   0.8.2       ✔ stringr 1.4.0  
+# ✔ readr   1.1.1       ✔ forcats 0.3.0  
+# ── Conflicts ──────────────────────────────────────────────────────────────────────────────── tidyverse_conflicts() ──
+# ✖ dplyr::filter() masks stats::filter()
+# ✖ dplyr::lag()    masks stats::lag()
+
 
 if(!require(foreach)){
   install.packages("foreach",dependencies = TRUE,repos='http://cran.us.r-project.org')
 }
 
 require(foreach)
-
+packageVersion("foreach")
+# 1.4.4
 
 if(!require(iterators)){
   install.packages("iterators",dependencies = TRUE,repos='http://cran.us.r-project.org')
 }
 
 require(iterators)
+packageVersion("iterators")
+# 1.0.10
 
 if(!require(parallel)){
   install.packages("parallel",dependencies = TRUE,repos='http://cran.us.r-project.org')
 }
 
 require(parallel)
-
-
+packageVersion("parallel")
+# 3.5.2
 
 # The code in this script does parallel processing and we need to register a 
 # parallel backend. Here we use the doRedis package that offers an interface to a Redis server installed

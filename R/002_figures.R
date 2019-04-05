@@ -38,6 +38,8 @@ if(!require(grid)){
 
 
 require(grid)
+packageVersion("grid")
+# 3.5.2
 
 if(!require(gridExtra)){
   install.packages("gridExtra",dependencies = TRUE,repos='http://cran.us.r-project.org')
@@ -45,7 +47,8 @@ if(!require(gridExtra)){
 
 
 require(gridExtra)
-
+packageVersion("gridExtra")
+# 2.3
 
 if(!require(magrittr)){
   install.packages("magrittr",dependencies = TRUE,repos='http://cran.us.r-project.org')
@@ -53,7 +56,8 @@ if(!require(magrittr)){
 
 
 require(magrittr)
-
+packageVersion("magrittr")
+#1.5
 
 if(!require(ggrepel)){
   install.packages("ggrepel",dependencies = TRUE,repos='http://cran.us.r-project.org')
@@ -61,6 +65,8 @@ if(!require(ggrepel)){
 
 
 require(ggrepel)
+packageVersion("ggrepel")
+# 0.8.0
 
 if(!require(directlabels)){
   install.packages("directlabels",dependencies = TRUE,repos='http://cran.us.r-project.org')
@@ -68,6 +74,8 @@ if(!require(directlabels)){
 
 
 require(directlabels)
+packageVersion("directlabels")
+# 2018.5.22
 
 if(!require(tidyverse)){
   install.packages("tidyverse",dependencies = TRUE,repos='http://cran.us.r-project.org')
@@ -75,9 +83,18 @@ if(!require(tidyverse)){
 
 
 require(tidyverse)
-
+# ── Attaching packages ───────────────────────────────────────────────────────────────────────────── tidyverse 1.2.1 ──
+# ✔ ggplot2 3.1.0       ✔ purrr   0.3.0  
+# ✔ tibble  2.0.1       ✔ dplyr   0.8.0.1
+# ✔ tidyr   0.8.2       ✔ stringr 1.4.0  
+# ✔ readr   1.1.1       ✔ forcats 0.3.0  
+# ── Conflicts ──────────────────────────────────────────────────────────────────────────────── tidyverse_conflicts() ──
+# ✖ dplyr::filter() masks stats::filter()
+# ✖ dplyr::lag()    masks stats::lag()
 
 ##### FIGURE 1 #####
+# Total fertility rates, adult and under-five mortality rates, and HIV
+# incidence rates from selected countries.
 
 load("results/figdata/p22500/figdata_all.Rdata")
 
@@ -239,6 +256,7 @@ ggsave("figures/Figure1.png",width = 8.5,height = 8.5,dpi=300,figure_1)
 
 
 ###### FIGURE 2 #####
+# Probabilities of anti-retroviral therapy initiation used in simulations
 
 # Get the countries for the ART data used in the simulations
 
@@ -277,6 +295,8 @@ ggsave("figures/Figure2.png",width = 5,height = 5,dpi = 300,figure_2)
 
 
 ##### FIGURE 3 ####
+# Indirect estimates from reports of surviving women versus indirect estimates from
+# reports of surviving women and women who died from HIV/AIDS
 
 rm(list=ls())
 

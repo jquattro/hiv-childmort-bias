@@ -1,11 +1,33 @@
 rm(list=ls())
 
+# R version and load packages and install if necessary
+
+# version
+# 
+# _                           
+# platform       x86_64-apple-darwin15.6.0   
+# arch           x86_64                      
+# os             darwin15.6.0                
+# system         x86_64, darwin15.6.0        
+# status                                     
+# major          3                           
+# minor          5.2                         
+# year           2018                        
+# month          12                          
+# day            20                          
+# svn rev        75870                       
+# language       R                           
+# version.string R version 3.5.2 (2018-12-20)
+# nickname       Eggshell Igloo   
+
 if(!require(bcaboot)){
   install.packages("bcaboot",dependencies = TRUE,repos='http://cran.us.r-project.org')
 }
 
 
 require(bcaboot)
+packageVersion("bcaboot")
+# 0.2.1
 
 if(!require(data.table)){
   install.packages("data.table",dependencies = TRUE,repos='http://cran.us.r-project.org')
@@ -13,7 +35,8 @@ if(!require(data.table)){
 
 
 require(data.table)
-
+packageVersion("data.table")
+# 1.11.8
 
 if(!require(pls)){
   install.packages("pls",dependencies = TRUE,repos='http://cran.us.r-project.org')
@@ -21,6 +44,8 @@ if(!require(pls)){
 
 
 require(pls)
+packageVersion("pls")
+# 2.7.0
 
 if(!require(glmnet)){
   install.packages("glmnet",dependencies = TRUE,repos='http://cran.us.r-project.org')
@@ -28,6 +53,8 @@ if(!require(glmnet)){
 
 
 require(glmnet)
+packageVersion("glmnet")
+# 2.0.16
 
 if(!require(officer)){
   install.packages("officer",dependencies = TRUE,repos='http://cran.us.r-project.org')
@@ -35,6 +62,8 @@ if(!require(officer)){
 
 
 require(officer)
+packageVersion("officer")
+# 0.3.2
 
 if(!require(flextable)){
   install.packages("flextable",dependencies = TRUE,repos='http://cran.us.r-project.org')
@@ -42,6 +71,9 @@ if(!require(flextable)){
 
 
 require(flextable)
+packageVersion("flextable")
+# 0.5.1
+
 
 if(!require(magrittr)){
   install.packages("magrittr",dependencies = TRUE,repos='http://cran.us.r-project.org')
@@ -49,7 +81,8 @@ if(!require(magrittr)){
 
 
 require(magrittr)
-
+packageVersion("magrittr")
+# 1.5
 
 if(!require(tidyverse)){
   install.packages("tidyverse",dependencies = TRUE,repos='http://cran.us.r-project.org')
@@ -57,7 +90,15 @@ if(!require(tidyverse)){
 
 
 require(tidyverse)
-
+packageVersion("tidyverse")
+# ── Attaching packages ───────────────────────────────────────────────────────────────────────────── tidyverse 1.2.1 ──
+# ✔ ggplot2 3.1.0       ✔ purrr   0.3.0  
+# ✔ tibble  2.0.1       ✔ dplyr   0.8.0.1
+# ✔ tidyr   0.8.2       ✔ stringr 1.4.0  
+# ✔ readr   1.1.1       ✔ forcats 0.3.0  
+# ── Conflicts ──────────────────────────────────────────────────────────────────────────────── tidyverse_conflicts() ──
+# ✖ dplyr::filter() masks stats::filter()
+# ✖ dplyr::lag()    masks stats::lag()
 
 # Get data for initial population 22,500
 
@@ -312,6 +353,10 @@ pls_errors <- lapply(ncomps,function(ncomp){
 
 error_table %<>% bind_rows(pls_errors)
 
+###### Table 4 #####
+
+# Prediction errors from models to correct bias in indirect estimates of U5M
+
 # Save error table
 
 ft <- error_table  %>% 
@@ -326,6 +371,7 @@ doc <- read_docx() %>%
   body_add_par(value = "Model selection.", style = "table title") %>% 
   body_add_flextable(ft)
 
+doc %>% print("tables/table4.docx")
 
 ##### Best fitting model #####
 
@@ -352,7 +398,8 @@ best.fitting.model <- glmnet(x,y,family="gaussian",alpha=alpha,lambda = lambda)
 
 save(x,best.fitting.model,full.model.formula,file="results/best_fitting_model.RData")
 
-##### Figure 4 #####
+##### Bias vs HIV prevalence 1990 #####
+
 
 # Compute prediction. Use the mean for numerical values
 
@@ -397,11 +444,11 @@ ggplot(to.plot, aes(x = hiv1990, y = fit)) +
   coord_cartesian(ylim=c(0,.05))
 
 
-ggsave("figures/figure4.png",width = 7,height = 5)
 
 
 
-##### Figure 5 #####
+
+##### Bias vs HIV prevalence 2010 #####
 
 # Compute prediction. Use the mean for numerical values
 
@@ -442,7 +489,7 @@ ggplot(to.plot, aes(x = hiv2010, y = fit)) +
   ylab("Bias")+
   coord_cartesian(ylim=c(0,.05))
 
-ggsave("figures/figure5.png",width = 7,height = 5)
+
 
 
 
@@ -455,7 +502,17 @@ ggsave("figures/figure5.png",width = 7,height = 5)
 # import empirical data
 fv <- fread("./data/facevalidity.csv") %>% set_colnames(c("country","agegroup", "ceb","cs","tfr2010","tfr2000","hiv1990", "hiv2000", "hiv2010","art2005","art2006","art2007","art2008","art2009","art2010","art2011","art_prev2005","art_prev2006","art_prev2007","art_prev2008","art_prev2009","prop15to19_2010","prev15to19_2010","hiv2005","hiv2006","hiv2007","hiv2008","hiv2009")) %>% mutate(cd=ceb-cs)
 
-##### Figures 6, 7 and table#####
+##### Figures 4, 5 and table#####
+
+# Figure 4
+# Under-five mortality estimates using CEB/CS from 2010 DHS for Malawi:
+# unadjusted (crude), adjusted (corrected) using best-performing model, and using Ward &
+# Zaba (2008) model
+
+# Figure 5
+# Under-five mortality estimates using CEB/CS from 2010 DHS for Tanzania:
+# unadjusted (crude), adjusted (corrected) using best-performing model, and using Ward &
+# Zaba (2008) model
 
 # Load bootstrap estimates for model predictions
 
@@ -469,10 +526,10 @@ if(file.exists("results/boot_outs.RData")){
 out_table <-data.frame()
 
 # Each run of the for loop creates one of the figures
-countries <- c(figure6="Malawi",figure7="Tanzania")
+countries <- c(figure4="Malawi",figure5="Tanzania")
 
 for(fig_name in names(countries)){
-  # fig_name <- "figure6"
+  # fig_name <- "figure4"
   fig_country <- countries[fig_name]
   
   # subset each country
@@ -664,9 +721,9 @@ if(!file.exists("results/boot_outs.RData")){
   save(boot_outs,file = "results/boot_outs.RData")
 }
 
-# Format the table with figure 6 and 7 data
+# Format the table with figure 4 and 5 data
 
-ft <- out_table %>% 
+out_table %>% 
   mutate(Adjusted=sprintf("%0.4f\n(%0.4f,%0.4f)",Adjusted,lwr,upr),
          Unadjusted=sprintf("%0.4f",Unadjusted),
          WZ=sprintf("%0.4f",WZ)) %>% # Format values
@@ -677,12 +734,3 @@ ft <- out_table %>%
   set_header_labels(agegroup="Age Group",WZ="Ward & Zaba") %>% # Better header labels
   width(width = 1.5) # Set cell width
 
-# Save table in a Word document
-
-doc <- read_docx()
-
-
-doc %<>% body_add_flextable(ft)
-
-
-doc %>% print("tables/fig_6_7_data.docx")

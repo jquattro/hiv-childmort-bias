@@ -1,3 +1,48 @@
+# R version and load packages and install if necessary
+
+# version
+# 
+# _                           
+# platform       x86_64-apple-darwin15.6.0   
+# arch           x86_64                      
+# os             darwin15.6.0                
+# system         x86_64, darwin15.6.0        
+# status                                     
+# major          3                           
+# minor          5.2                         
+# year           2018                        
+# month          12                          
+# day            20                          
+# svn rev        75870                       
+# language       R                           
+# version.string R version 3.5.2 (2018-12-20)
+# nickname       Eggshell Igloo   
+
+if(!require(magrittr)){
+  install.packages("magrittr",dependencies = TRUE,repos='http://cran.us.r-project.org')
+}
+
+
+require(magrittr)
+packageVersion("magrittr")
+# 1.5
+
+if(!require(tidyverse)){
+  install.packages("tidyverse",dependencies = TRUE,repos='http://cran.us.r-project.org')
+}
+
+
+require(tidyverse)
+packageVersion("tidyverse")
+# ── Attaching packages ───────────────────────────────────────────────────────────────────────────── tidyverse 1.2.1 ──
+# ✔ ggplot2 3.1.0       ✔ purrr   0.3.0  
+# ✔ tibble  2.0.1       ✔ dplyr   0.8.0.1
+# ✔ tidyr   0.8.2       ✔ stringr 1.4.0  
+# ✔ readr   1.1.1       ✔ forcats 0.3.0  
+# ── Conflicts ──────────────────────────────────────────────────────────────────────────────── tidyverse_conflicts() ──
+# ✖ dplyr::filter() masks stats::filter()
+# ✖ dplyr::lag()    masks stats::lag()
+
 abc = read.csv("./data/UNgeneral_MLT_ABC.csv", head=TRUE)
 efg = read.csv("./data/UNgeneral_MLT_EFG.csv", head=TRUE)
 
@@ -15,16 +60,9 @@ ind_est_computations_core <- function(surv_moms,survey){
            fxplus2=ceb*mpagegroup
     ) %>% as.data.frame()
   
-  
-  # totalceb <- tapply(surv_moms$ceb, surv_moms$agegroup,sum)
-  # cd <- tapply(surv_moms$cd, surv_moms$agegroup,sum)
-  # women <- tapply(surv_moms$cd, surv_moms$agegroup,length)
-  # cdceb <- cd/totalceb
-  # ceb <- totalceb/women
-  # mpagegroup <- seq(17,47,5)
-  # fxplus2 <- ceb*mpagegroup
+
   m <- byagegroup %>% summarise(m=sum(fxplus2)/sum(ceb)) %>% pull(m)
-  # byagegroup = cbind(c(1:7),totalceb,cd,women,cdceb,ceb)
+  
   
   #Parity ratios
   p1520 = byagegroup[byagegroup$agegroup==1,"ceb"]/byagegroup[byagegroup$agegroup==2,"ceb"]
@@ -51,7 +89,7 @@ ind_est_computations_core <- function(surv_moms,survey){
   
   #Convert each n q 0 into 5q0
   # Use UN General Female, e(0)=60
-  #n = c(1,2,3,5,10,15,20)
+  
   l = c(.92688,.91025,.90151,.89193,.89534,.89002,.88195)
   q = 1-l
   logitMLT=.5*log(q/(1-q))
@@ -161,14 +199,14 @@ ind_est_all <- function(momkidsclean){
 ind_est_hiv <- function(momkidsclean){
   
   # Keep surviving moms and moms who died from HIV
+  
   #Surviving moms
   surv_momsfull = momkidsclean[is.na(momkidsclean$death_date),]
+  
   #Moms who died from HIV
   hiv_momsfull = momkidsclean[momkidsclean$hivdeath==1 & !is.na(momkidsclean$hivdeath),]
   all_momsfull <- rbind(surv_momsfull,hiv_momsfull)
   
-  #surv_momsfull = momkidsclean[is.na(momkidsclean$death_date),]
-  #dead_moms = momkidsclean[!is.na(momkidsclean$death_date),]
   
   #Create age group variable
   yrend = 2010
