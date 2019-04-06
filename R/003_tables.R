@@ -1,3 +1,17 @@
+rm(list=ls())
+
+###############################################################################
+# Name: 003_tables.R
+# Author: John Quattrochi (john.quattrochi@gmail.com)
+# Assistant: Juan Luis Herrera Cortijo (juan.luis.herrera.cortijo@gmail.com)
+# Purpose: Produces tables 2 and 3
+# The script assumes the following folder structure:
+# Scripts are stored in "[project folder]/R"
+# Data are stored in "[project folder]/data"
+# Results are stored in "[project folder]/results"
+###############################################################################
+
+
 # R version and load packages and install if necessary
 
 # version

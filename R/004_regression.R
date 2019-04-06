@@ -1,5 +1,17 @@
 rm(list=ls())
 
+###############################################################################
+# Name: 004_regression.R
+# Author: John Quattrochi (john.quattrochi@gmail.com)
+# Assistant: Juan Luis Herrera Cortijo (juan.luis.herrera.cortijo@gmail.com)
+# Purpose: Performs model selection and produces table4 and figures 4 and 5.
+# The script assumes the following folder structure:
+# Scripts are stored in "[project folder]/R"
+# Data are stored in "[project folder]/data"
+# Results are stored in "[project folder]/results"
+###############################################################################
+
+
 # R version and load packages and install if necessary
 
 # version

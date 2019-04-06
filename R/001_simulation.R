@@ -3,7 +3,7 @@ system("docker container prune -f")
 rm(list=ls())
 
 ###############################################################################
-# Name: 001_simulation
+# Name: 001_simulation.R
 # Author: John Quattrochi (john.quattrochi@gmail.com)
 # Assistant: Juan Luis Herrera Cortijo (juan.luis.herrera.cortijo@gmail.com)
 # Purpose: Run simulations and collect data.

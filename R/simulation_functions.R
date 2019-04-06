@@ -1,3 +1,15 @@
+###############################################################################
+# Name: simulation_functions.R
+# Author: John Quattrochi (john.quattrochi@gmail.com)
+# Assistant: Juan Luis Herrera Cortijo (juan.luis.herrera.cortijo@gmail.com)
+# Purpose: Defines functions used in the simulations
+# The script assumes the following folder structure:
+# Scripts are stored in "[project folder]/R"
+# Data are stored in "[project folder]/data"
+# Results are stored in "[project folder]/results"
+###############################################################################
+
+
 # R version and load packages and install if necessary
 
 # version
@@ -1926,7 +1938,35 @@ children.dead.per.mother <- function(w){
 ##### RUN SIMULATION #####
 
 
-
+#' Call this function to run a full simulation
+#' 
+#' @param inp (data.frame) simulation parameters
+#' @param initialpop (integer) initial population
+#' @param years (numeric) vector of years in simulation
+#' @param ages (numeric) vector of ages
+#' @param hivinc_s (data.frame) HIV incidence curve estimated by Hogan and Salomon (2012)
+#' @param mort_series (data.frame) mortality series, must contain columns year and q45_15 
+#' from the Institute for Health Metrics and Evaluation.
+#' @param adultmort (data.frame) UN model life table (UN Population Division). models mortality for each 45q15
+#' @param worldfert (data.frame) estimates of age-specific fertility rates (ASFR) 
+#' from the United Nations Population Division's World Fertility Data (2013) 
+#' @param tfr_series (data.frame) Interpolated estimates of the total fertility rate (TFR) 
+#' from the United Nations Population Division’s World Population Prospects (2012)
+#' @param art_series (matrix)  Annual probabilities for initiating ART given that a woman’s CD4 was below threshold, 
+#' for 2004 to 2010. Probability is 0 before 2004.
+#' @param u5m_edit (data.frame) child mortatily UN Inter-agency Group for Child Mortality 
+#' Estimation (UN IGME) (2012) for one country.
+#' @param matmort (data.frame) Maternal mortality
+#' @return (list) simulation result with elements: 
+#' bigres (data.frame) with elements sexactive15,mmr0,mmr_dec,curve,bfeed,growth,hiv1985,hiv1990,hiv2000,hiv2010,art2004,art2006,art2008,art2010,vt2010,vt2000,vt1990,vt1985,art_prev2005,art_prev2007,art_prev2009,tfr1980,tfr1990,tfr2000,tfr2010,runsec,
+#' tfr realized TFR,
+#' art_cov[c(2000:2010)] realized ART coverage from 2000 to 2010, 
+#' hiv_prev[c(1980:2010)] (vector) HIV prevalence between 1980 and 2010,
+#' hivdeathrate NA,
+#' inp (data.frame) input parameters used in the simulation,
+#' w (population matrix),
+#' art_prev[c(2000:2010)] (vector) ART prevalence between 2000 and 2010,
+#' hiv_inc[c(1980:2010)] (vector) hiv incidence between 1980 and 2010
 bigsim <- function(inp,initialpop,years,ages,hivhogan,mort_series,adultmort,worldfert,tfr_series,art_series,u5m_edit,matmort){
   
   

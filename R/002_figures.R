@@ -1,7 +1,7 @@
 rm(list=ls())
 
 ###############################################################################
-# Name: 002_figures
+# Name: 002_figures.R
 # Author: John Quattrochi (john.quattrochi@gmail.com)
 # Assistant: Juan Luis Herrera Cortijo (juan.luis.herrera.cortijo@gmail.com)
 # Purpose: Plots figures 1 to 3
