@@ -7,6 +7,17 @@ rm(list=ls())
 # Author: John Quattrochi (john.quattrochi@gmail.com)
 # Assistant: Juan Luis Herrera Cortijo (juan.luis.herrera.cortijo@gmail.com)
 # Purpose: Run simulations and collect data.
+#
+# Notes: The code in 001_simulation.R does parallel processing and we need to 
+# register a parallel backend. Here we use the doRedis package that offers an 
+# interface to a Redis server installed on a docker. The number of workers should 
+# be adjusted to the memory and cpu resources on the computer. Please visit 
+# https://docs.docker.com to learn how to install docker on your computer.
+#
+# This script runs several simmulations and stores the results of each simulation
+# in a temporary file. That way if the simulations are interrupted, the script should
+# pick up the computations where they were left.
+#
 # The script assumes the following folder structure:
 # Scripts are stored in "[project folder]/R"
 # Data are stored in "[project folder]/data"
