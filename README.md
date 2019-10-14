@@ -8,6 +8,8 @@
 
 ## Scripts
 
+IMPORTANT: Each scripts lists the versions of the packages under it was developed. Please make sure that you have the right version of all the packages installed before running the scripts, otherwise later packages updates might break the code.
+
 - R/001_simulation.R: Runs simulations and compiles the outputs.
 - R/002_figures.R: plots figures 1 to 3
 - R/003_tables.R: produces tables 2 and 3.
