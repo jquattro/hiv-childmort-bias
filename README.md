@@ -17,6 +17,8 @@ IMPORTANT: Each scripts lists the versions of the packages under it was develope
 - indirect_estimates_functions.R: functions used to compute indirect estimates.
 - simulation_functions.R: functions used to run the simulations.
 
-## Docker
+## Docker and turning parallel computing off
 
 The code in 001_simulation.R does parallel processing and we need to register a parallel backend. Here we use the doRedis package that offers an interface to a Redis server installed on a docker. The number of workers should be adjusted to the memory and cpu resources on the computer. Please visit https://docs.docker.com to learn how to install docker on your computer.
+
+If you want to run the code sequentially, please follow the instructions in the section PARALLEL COMPUTING SETUP in 001_simulation.R about how to turn parallel computing off.

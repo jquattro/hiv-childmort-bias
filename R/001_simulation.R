@@ -91,10 +91,16 @@ require(parallel)
 packageVersion("parallel")
 # 3.5.2
 
+###### PARALLEL COMPUTING SETUP #####
+
 # The code in this script does parallel processing and we need to register a 
 # parallel backend. Here we use the doRedis package that offers an interface to a Redis server installed
 # on a docker. The number of workers should be adjusted to the memory and cpu resources on the computer. Please
-# visit https://docs.docker.com to learn how to install docker on your computer
+# visit https://docs.docker.com to learn how to install docker on your computer.
+
+# But if you don't want to use parallel computing, then you only need to comment this section and the code will run
+# sequentially.
+
 
 if(!require(doRedis)){
   install.packages("doRedis",dependencies = TRUE,repos='http://cran.us.r-project.org')
@@ -102,6 +108,8 @@ if(!require(doRedis)){
 require(doRedis)
 packageVersion("doRedis")
 # 1.1.1
+
+#---------------- Start of comment to turn parallel computing off -------------------------
 
 # Stop the Redis docker
 system('docker stop $( docker ps -f "name=redis-server" -q)')
@@ -131,6 +139,9 @@ startLocalWorkers(n=cores_used,queue="hiv_simultions")
 Sys.sleep(5)
 # Extra options.
 options('redis:num'=TRUE)
+
+
+#---------------- End of comment to turn parallel computing off -------------------------
 
 ##### DEFINE FOLDERS #######
 
